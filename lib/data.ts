@@ -49,11 +49,23 @@ export const SERVICES = [
   },
 ] as const;
 
+export const PROJECT_FIELDS = [
+  "All",
+  "Product",
+  "Brand",
+  "Commerce",
+  "Editorial",
+] as const;
+
+export type ProjectField = (typeof PROJECT_FIELDS)[number];
+
 export const PROJECTS = [
   {
     id: "aurora",
     title: "Aurora",
     category: "Fintech Platform",
+    field: "Product",
+    tagline: "A banking experience that finally feels human.",
     year: "2025",
     accent: "#3b82f6",
   },
@@ -61,6 +73,8 @@ export const PROJECTS = [
     id: "monolith",
     title: "Monolith",
     category: "Architecture Studio",
+    field: "Brand",
+    tagline: "An identity as considered as the buildings.",
     year: "2025",
     accent: "#7c3aed",
   },
@@ -68,6 +82,8 @@ export const PROJECTS = [
     id: "halcyon",
     title: "Halcyon",
     category: "Luxury Travel",
+    field: "Editorial",
+    tagline: "Slow journeys, told at the pace they deserve.",
     year: "2024",
     accent: "#0ea5e9",
   },
@@ -75,8 +91,28 @@ export const PROJECTS = [
     id: "vesper",
     title: "Vesper",
     category: "Fashion House",
+    field: "Commerce",
+    tagline: "A boutique that sells the way it dresses.",
     year: "2024",
     accent: "#a855f7",
+  },
+  {
+    id: "cascade",
+    title: "Cascade",
+    category: "SaaS Analytics",
+    field: "Product",
+    tagline: "Data that reads like a story, not a spreadsheet.",
+    year: "2023",
+    accent: "#22d3ee",
+  },
+  {
+    id: "atlas",
+    title: "Atlas",
+    category: "Property Group",
+    field: "Brand",
+    tagline: "A portfolio of places, unified under one mark.",
+    year: "2023",
+    accent: "#6366f1",
   },
 ] as const;
 
