@@ -1,0 +1,13 @@
+# Core numerical / data stack
+pandas>=2.0
+numpy>=1.24
+
+# Charting
+matplotlib>=3.7
+
+# Testing
+pytest>=7.0
+
+# Optional: live trading via exchange APIs (Binance, etc.).
+# Only required for `python main.py live`. Uncomment to install:
+# ccxt>=4.0

@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Logs and generated artifacts
+logs/*.log
+logs/charts/
+logs/report.json
+*.png
+
+# Environment / secrets
+.env
+.env.local
+
+# Keep the logs directory in version control (but not its contents)
+!logs/.gitkeep
