@@ -134,7 +134,7 @@ export function Work() {
                   {/* Inline mockup — mobile / touch only */}
                   {touch && (
                     <div className="mt-5 h-52 w-full">
-                      <ProjectMockup accent={p.accent} variant={p.i} />
+                      <ProjectMockup accent={p.accent} layout={p.layout} />
                     </div>
                   )}
                 </div>
@@ -180,7 +180,7 @@ export function Work() {
               >
                 <ProjectMockup
                   accent={active.accent}
-                  variant={hovered ?? 0}
+                  layout={active.layout}
                   className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]"
                 />
                 <p className="mt-3 text-center font-serif text-lg italic text-paper-dim">

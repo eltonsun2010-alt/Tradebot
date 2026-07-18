@@ -14,11 +14,9 @@ import { ProjectMockup } from "@/components/ui/ProjectMockup";
 export function ProjectDetail({
   project,
   next,
-  index,
 }: {
   project: Project;
   next: Project;
-  index: number;
 }) {
   return (
     <>
@@ -69,7 +67,7 @@ export function ProjectDetail({
               className="relative mx-auto aspect-[16/10] w-full max-w-5xl rounded-2xl p-3 md:p-5"
               style={{ background: `linear-gradient(160deg, ${project.accent}22, transparent)` }}
             >
-              <ProjectMockup accent={project.accent} variant={index} />
+              <ProjectMockup accent={project.accent} layout={project.layout} />
             </div>
           </Reveal>
         </section>

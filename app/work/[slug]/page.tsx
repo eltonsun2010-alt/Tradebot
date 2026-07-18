@@ -36,5 +36,5 @@ export default async function ProjectPage({
   const index = PROJECTS.findIndex((p) => p.id === slug);
   const next = PROJECTS[(index + 1) % PROJECTS.length];
 
-  return <ProjectDetail project={project} next={next} index={index} />;
+  return <ProjectDetail project={project} next={next} />;
 }
