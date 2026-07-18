@@ -19,7 +19,7 @@ export function Trust() {
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Why it matters</span>
           </div>
-          <h2 className="text-display font-display font-extrabold leading-[1.02] text-paper">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-5xl lg:text-[3.4rem]">
             <AnimatedText text="People decide whether to trust you long before they contact you." by="word" />
           </h2>
         </div>

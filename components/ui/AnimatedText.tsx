@@ -26,7 +26,7 @@ const container = (stagger: number, delay: number): Variants => ({
 });
 
 const child: Variants = {
-  hidden: { y: "115%", opacity: 0, filter: "blur(14px)" },
+  hidden: { y: "45%", opacity: 0, filter: "blur(12px)" },
   visible: {
     y: "0%",
     opacity: 1,
@@ -36,8 +36,9 @@ const child: Variants = {
 };
 
 /**
- * Editorial text reveal. Words are masked; each unit rises from below,
- * un-blurring as it lands — the house style for every headline.
+ * Editorial text reveal. Each unit rises a little and un-blurs as it lands.
+ * No clipping mask — line spacing is governed purely by line-height, so
+ * headlines stay evenly spaced and never overlap across browsers.
  */
 export function AnimatedText({
   text,
@@ -66,12 +67,7 @@ export function AnimatedText({
       aria-label={text}
     >
       {words.map((word, wi) => (
-        <span
-          key={wi}
-          className="relative inline-block overflow-hidden align-top"
-          aria-hidden
-          style={{ paddingBottom: "0.2em" }}
-        >
+        <span key={wi} className="relative inline-block" aria-hidden>
           {by === "char" ? (
             word.split("").map((ch, ci) => (
               <motion.span key={ci} variants={child} className="inline-block will-change-transform">

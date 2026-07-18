@@ -23,7 +23,7 @@ export function GradientReveal({
 }) {
   return (
     <motion.span
-      className="inline-block overflow-hidden pb-[0.2em] align-top"
+      className="inline-block"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.6 }}
@@ -34,9 +34,11 @@ export function GradientReveal({
           className
         )}
         variants={{
-          hidden: { y: "115%" },
+          hidden: { y: "45%", opacity: 0, filter: "blur(10px)" },
           visible: {
             y: "0%",
+            opacity: 1,
+            filter: "blur(0px)",
             transition: { duration: 0.9, delay, ease: EASE_LUX },
           },
         }}

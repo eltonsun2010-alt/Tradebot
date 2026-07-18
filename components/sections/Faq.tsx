@@ -18,7 +18,7 @@ export function Faq() {
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Common questions</span>
           </div>
-          <h2 className="text-display font-display font-extrabold text-paper">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-5xl">
             <AnimatedText text="Before you ask, here's the honest answer." by="word" />
           </h2>
         </div>
