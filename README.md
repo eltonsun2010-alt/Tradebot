@@ -32,13 +32,14 @@ npm run typecheck  # tsc --noEmit
 app/                  layout (fonts · metadata · providers) · page · globals.css
 components/
   providers/          SmoothScrollProvider — Lenis ↔ GSAP ScrollTrigger
-  ui/                 Cursor · MagneticButton · AnimatedText · GrainOverlay ·
-                      ScrollProgress · Reveal
-  layout/             Navbar · FullscreenMenu
+  ui/                 Cursor · MagneticButton · AnimatedText · GradientReveal ·
+                      ScrollRevealText · Counter · ProjectMockup · FloatingField ·
+                      GrainOverlay · ScrollProgress · Reveal
+  layout/             Navbar · FullscreenMenu · Footer
   canvas/             HeroCanvas (ssr:false) · ShaderBackground · Particles
-  sections/           Loader · Hero  (About/Services/Portfolio/Process/
-                      Testimonials/Contact to follow)
-  Home.tsx            client coordinator: loader → reveal
+  sections/           Loader · Hero · Work · Studio · Services · Process ·
+                      Testimonials · Contact
+  Home.tsx            client coordinator: loader → reveal → sections
 hooks/                useMediaQuery · usePrefersReducedMotion · useMousePosition …
 lib/                  gsap · motion (typed eases) · utils (cn) · data (content)
 ```
@@ -51,8 +52,20 @@ lib/                  gsap · motion (typed eases) · utils (cn) · data (conten
   gradient accent line, magnetic CTAs, scroll parallax.
 - **Navigation** — scroll-aware glass navbar, animated logo, full-screen menu
   with per-link staggered mask reveals.
+- **Work** — editorial project list with a cursor-tracked floating mockup
+  preview, per-project accent glow, category filtering; inline mockups on touch.
+- **Studio** — word-by-word scroll-brightened manifesto, count-up stats, and a
+  vertical timeline whose accent→violet line draws on scroll.
+- **Services** — hover-expanding panels with a cursor-tracked light pool, a
+  growing accent rail and animated plus/minus.
+- **Process** — GSAP-pinned horizontal-scroll sequence (Discover → Design →
+  Build → Evolve); stacks into a column below `md`.
+- **Testimonials** — interactive 3D glass deck with pointer-tilt depth, ghost
+  cards, direction-aware rotate transitions, drag-to-swipe and autoplay.
+- **Contact** — floating-label fields, client-side validation, and a satisfying
+  idle → sending → sent submit with a drawn check.
 - **Global** — bespoke cursor (dot + lagging ring with hover/label states),
-  animated film grain, scroll-progress line.
+  animated film grain, scroll-progress line, oversized footer wordmark.
 
 ## Accessibility & performance
 
@@ -62,7 +75,8 @@ lib/                  gsap · motion (typed eases) · utils (cn) · data (conten
   intentional. DPR is clamped and particle counts scale down on mobile.
 - Semantic markup, full Open Graph / Twitter metadata, keyboard-dismissable menu.
 
-## Roadmap
+## Status
 
-Built section by section: **Foundation · Loader · Hero · Navigation** are done.
-Next: About → Services → Portfolio → Process → Testimonials → Contact → Footer.
+All sections are built: **Loader · Hero · Work · Studio · Services · Process ·
+Testimonials · Contact · Footer**. Each was shipped and verified section by
+section (typecheck, production build, and in-browser checks on desktop + mobile).
