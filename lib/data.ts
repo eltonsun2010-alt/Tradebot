@@ -18,6 +18,32 @@ export const STATS = [
   { value: 98, suffix: "%", label: "Client retention" },
 ] as const;
 
+export const MANIFESTO =
+  "We are a small studio with a large obsession — interfaces that move like they mean it. Design is how it works. Motion is how it feels. The details are the whole thing. Every project is engineered to feel expensive, and to convert like it.";
+
+export const TIMELINE = [
+  {
+    year: "2019",
+    title: "Founded",
+    body: "Southpage opens with three people and one belief — the web could feel far better than it does.",
+  },
+  {
+    year: "2021",
+    title: "Became a studio",
+    body: "Strategy, design and engineering come under one roof, so nothing gets lost in translation.",
+  },
+  {
+    year: "2023",
+    title: "Recognised",
+    body: "Awwwards, CSSDA and a client roster that now spans four continents and three industries.",
+  },
+  {
+    year: "2025",
+    title: "Today",
+    body: "A tight senior team shipping cinematic work for brands that refuse to blend in.",
+  },
+] as const;
+
 export const SERVICES = [
   {
     index: "01",

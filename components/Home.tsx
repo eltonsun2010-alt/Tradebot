@@ -5,6 +5,7 @@ import { Loader } from "@/components/sections/Loader";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/sections/Hero";
 import { Work } from "@/components/sections/Work";
+import { Studio } from "@/components/sections/Studio";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 export function Home() {
@@ -21,14 +22,15 @@ export function Home() {
       <main>
         <Hero play={loaded} />
         <Work />
+        <Studio />
 
         {/* Anchor stubs — replaced by full sections in the next milestones. */}
         <section
-          id="studio"
+          id="services"
           className="relative flex min-h-[50vh] items-center justify-center border-t border-line section-x"
         >
           <p className="max-w-xl text-center font-display text-2xl text-paper-dim md:text-3xl">
-            <span className="text-paper">Studio, Services, Process</span> and{" "}
+            <span className="text-paper">Services, Process</span> and{" "}
             <span className="text-paper">Contact</span> — crafted next.
           </p>
         </section>
