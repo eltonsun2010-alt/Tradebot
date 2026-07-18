@@ -46,4 +46,8 @@ export const coffeeImg = {
   pourover: lf("coffee,brewing", 26),
   latteArt: lf("latte,coffee", 27),
   roast: lf("coffee,roasting", 28),
+  // Roast card photos chosen to echo each blend's tasting notes.
+  roastCocoa: lf("coffee,chocolate", 31), // cocoa · hazelnut · brown sugar
+  roastBerry: lf("coffee,berries", 32), // blueberry · jasmine · honey
+  roastDark: lf("espresso,dark", 33), // dark chocolate · cedar · spice
 };

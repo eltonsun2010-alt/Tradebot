@@ -17,9 +17,9 @@ const C = coffeeConfig.colors;
 const serif = { fontFamily: coffeeConfig.fontDisplay };
 
 const roasts = [
-  { name: "Sunday Blend", notes: "Cocoa · hazelnut · brown sugar", price: "$18", img: coffeeImg.cup, grad: warm },
-  { name: "Ethiopia Guji", notes: "Blueberry · jasmine · honey", price: "$22", img: coffeeImg.pourover, grad: warmSoft },
-  { name: "Midnight Oak", notes: "Dark chocolate · cedar · spice", price: "$19", img: coffeeImg.roast, grad: warm },
+  { name: "Sunday Blend", notes: "Cocoa · hazelnut · brown sugar", price: "$18", img: coffeeImg.roastCocoa, grad: warm },
+  { name: "Ethiopia Guji", notes: "Blueberry · jasmine · honey", price: "$22", img: coffeeImg.roastBerry, grad: warmSoft },
+  { name: "Midnight Oak", notes: "Dark chocolate · cedar · spice", price: "$19", img: coffeeImg.roastDark, grad: warm },
 ];
 
 const stats = [
