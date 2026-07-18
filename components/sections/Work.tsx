@@ -1,28 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useSpring,
-} from "framer-motion";
-import { PROJECTS, PROJECT_FIELDS, type ProjectField } from "@/lib/data";
+import { AnimatePresence, motion, useMotionValue, useSpring } from "framer-motion";
+import { PROJECTS } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { ProjectMockup } from "@/components/ui/ProjectMockup";
 import { EASE_LUX } from "@/lib/motion";
 import { useIsTouch } from "@/hooks/useMediaQuery";
-import { cn } from "@/lib/utils";
 
 export function Work() {
   const touch = useIsTouch();
-  const [filter, setFilter] = useState<ProjectField>("All");
   const [hovered, setHovered] = useState<number | null>(null);
-
-  const visible = PROJECTS.map((p, i) => ({ ...p, i })).filter(
-    (p) => filter === "All" || p.field === filter
-  );
 
   // Cursor-following preview (desktop only). Springs give the card weight.
   const mx = useMotionValue(0);
@@ -50,7 +39,7 @@ export function Work() {
             <span className="text-eyebrow text-accent">Selected Work</span>
             <span className="h-px w-12 bg-line-strong" />
             <span className="text-eyebrow text-paper-faint">
-              {String(visible.length).padStart(2, "0")}
+              {String(PROJECTS.length).padStart(2, "0")}
             </span>
           </div>
           <h2 className="text-display font-display font-extrabold text-paper">
@@ -59,105 +48,81 @@ export function Work() {
             <AnimatedText text="a second look." by="word" delay={0.08} />
           </h2>
         </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          {PROJECT_FIELDS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              data-cursor="hover"
-              className={cn(
-                "relative rounded-full border px-4 py-2 text-sm transition-colors duration-300",
-                filter === f
-                  ? "border-transparent text-ink"
-                  : "border-line-strong text-paper-dim hover:text-paper"
-              )}
-            >
-              {filter === f && (
-                <motion.span
-                  layoutId="filter-pill"
-                  className="absolute inset-0 rounded-full bg-paper"
-                  transition={{ duration: 0.5, ease: EASE_LUX }}
-                />
-              )}
-              <span className="relative z-10">{f}</span>
-            </button>
-          ))}
-        </div>
+        <p className="max-w-xs text-base leading-relaxed text-paper-dim md:text-right">
+          Three live demo sites — each a different industry, palette and mood.
+          Click any one to explore it in full.
+        </p>
       </div>
 
       {/* Project list */}
       <ul className="mt-16 border-t border-line">
-        <AnimatePresence initial={false} mode="popLayout">
-          {visible.map((p) => (
-            <motion.li
-              key={p.id}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: EASE_LUX }}
-              onMouseEnter={() => setHovered(p.i)}
-              onMouseLeave={() => setHovered(null)}
-              className="group relative border-b border-line"
+        {PROJECTS.map((p, i) => (
+          <motion.li
+            key={p.id}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.7, delay: i * 0.06, ease: EASE_LUX }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+            className="group relative border-b border-line"
+          >
+            <Link
+              href={p.demo}
+              data-cursor={touch ? undefined : "view"}
+              data-cursor-label="Live demo"
+              className="relative grid grid-cols-[auto_1fr_auto] items-center gap-4 py-7 md:gap-8 md:py-9"
             >
-              <Link
-                href={`/work/${p.id}`}
-                data-cursor={touch ? undefined : "hover"}
-                className="relative grid grid-cols-[auto_1fr_auto] items-center gap-4 py-6 md:gap-8 md:py-8"
-              >
-                {/* Accent wash on hover */}
-                <span
-                  className="pointer-events-none absolute inset-0 -mx-4 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:-mx-8"
-                  style={{
-                    background: `radial-gradient(80% 140% at 15% 50%, ${p.accent}1f, transparent 70%)`,
-                  }}
-                />
+              {/* Accent wash on hover */}
+              <span
+                className="pointer-events-none absolute inset-0 -mx-4 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:-mx-8"
+                style={{
+                  background: `radial-gradient(80% 140% at 15% 50%, ${p.accent}22, transparent 70%)`,
+                }}
+              />
 
-                <span className="relative font-display text-sm tabular-nums text-paper-faint">
-                  {String(p.i + 1).padStart(2, "0")}
-                </span>
+              <span className="relative font-display text-sm tabular-nums text-paper-faint">
+                {String(i + 1).padStart(2, "0")}
+              </span>
 
-                <div className="relative min-w-0">
-                  <h3 className="flex items-center gap-3 font-display text-3xl font-bold tracking-[-0.02em] text-paper transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] md:text-5xl md:group-hover:translate-x-3">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                      style={{ background: p.accent }}
-                    />
-                    {p.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-paper-dim md:ml-[22px]">
-                    {p.category}
-                  </p>
-
-                  {/* Inline mockup — mobile / touch only */}
-                  {touch && (
-                    <div className="mt-5 h-52 w-full">
-                      <ProjectMockup accent={p.accent} layout={p.layout} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative flex items-center gap-6">
-                  <span className="hidden text-sm tabular-nums text-paper-faint sm:block">
-                    {p.year}
-                  </span>
+              <div className="relative min-w-0">
+                <h3 className="flex items-center gap-3 font-display text-3xl font-bold tracking-[-0.02em] text-paper transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] md:text-5xl md:group-hover:translate-x-3">
                   <span
-                    className="grid h-11 w-11 place-items-center rounded-full border border-line-strong text-paper transition-all duration-500 group-hover:border-transparent"
-                    style={
-                      hovered === p.i
-                        ? { background: p.accent, color: "#050505" }
-                        : undefined
-                    }
-                  >
-                    <Arrow />
-                  </span>
-                </div>
-              </Link>
-            </motion.li>
-          ))}
-        </AnimatePresence>
+                    className="h-2.5 w-2.5 shrink-0 rounded-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{ background: p.accent }}
+                  />
+                  {p.title}
+                </h3>
+                <p className="mt-1 text-sm text-paper-dim md:ml-[22px]">
+                  {p.category}
+                </p>
+
+                {/* Inline mockup — mobile / touch only */}
+                {touch && (
+                  <div className="mt-5 h-52 w-full">
+                    <ProjectMockup accent={p.accent} layout={p.layout} />
+                  </div>
+                )}
+              </div>
+
+              <div className="relative flex items-center gap-6">
+                <span className="hidden text-sm tabular-nums text-paper-faint sm:block">
+                  {p.year}
+                </span>
+                <span
+                  className="grid h-11 w-11 place-items-center rounded-full border border-line-strong text-paper transition-all duration-500 group-hover:border-transparent"
+                  style={
+                    hovered === i
+                      ? { background: p.accent, color: "#050505" }
+                      : undefined
+                  }
+                >
+                  <Arrow />
+                </span>
+              </div>
+            </Link>
+          </motion.li>
+        ))}
       </ul>
 
       {/* Floating cursor preview — desktop only */}
