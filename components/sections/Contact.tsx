@@ -6,6 +6,7 @@ import { AnimatedText } from "@/components/ui/AnimatedText";
 import { GradientReveal } from "@/components/ui/GradientReveal";
 import { FloatingField } from "@/components/ui/FloatingField";
 import { Reveal } from "@/components/ui/Reveal";
+import { MeshBackground } from "@/components/ui/MeshBackground";
 import { EASE_LUX } from "@/lib/motion";
 
 type Status = "idle" | "sending" | "sent";
@@ -46,11 +47,7 @@ export function Contact() {
 
   return (
     <section id="contact" className="relative overflow-hidden border-t border-line py-28 section-x md:py-40">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-80"
-        style={{ background: "radial-gradient(50% 60% at 12% 0%, rgba(59,130,246,0.12), transparent 60%), radial-gradient(45% 50% at 100% 100%, rgba(124,58,237,0.10), transparent 60%)" }}
-      />
+      <MeshBackground className="opacity-70" opacity={0.7} />
 
       <div className="relative grid gap-16 md:grid-cols-2 md:gap-24">
         {/* Invitation */}

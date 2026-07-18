@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { AUTOMATIONS } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { Reveal } from "@/components/ui/Reveal";
+import { MeshBackground } from "@/components/ui/MeshBackground";
 import { EASE_LUX } from "@/lib/motion";
 
 const icons = ["⚡", "📅", "🔁", "🗂️", "🔔", "⚙️"];
@@ -11,11 +12,7 @@ const icons = ["⚡", "📅", "🔁", "🗂️", "🔔", "⚙️"];
 export function Automation() {
   return (
     <section id="automation" className="relative overflow-hidden border-t border-line py-28 section-x md:py-40">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-70"
-        style={{ background: "radial-gradient(50% 50% at 85% 0%, rgba(124,58,237,0.10), transparent 60%)" }}
-      />
+      <MeshBackground className="opacity-60" opacity={0.6} />
 
       <div className="relative grid gap-10 md:grid-cols-12 md:items-end">
         <div className="md:col-span-7">
