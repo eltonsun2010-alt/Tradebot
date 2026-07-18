@@ -14,9 +14,16 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 type LenisCtx = {
   lenis: Lenis | null;
   scrollTo: (target: string | number | HTMLElement, opts?: object) => void;
+  stop: () => void;
+  start: () => void;
 };
 
-const Ctx = createContext<LenisCtx>({ lenis: null, scrollTo: () => {} });
+const Ctx = createContext<LenisCtx>({
+  lenis: null,
+  scrollTo: () => {},
+  stop: () => {},
+  start: () => {},
+});
 
 export const useLenis = () => useContext(Ctx);
 
@@ -58,5 +65,18 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  return <Ctx.Provider value={{ lenis: lenisRef.current, scrollTo }}>{children}</Ctx.Provider>;
+  const stop = () => {
+    lenisRef.current?.stop();
+    document.documentElement.classList.add("lenis-stopped");
+  };
+  const start = () => {
+    lenisRef.current?.start();
+    document.documentElement.classList.remove("lenis-stopped");
+  };
+
+  return (
+    <Ctx.Provider value={{ lenis: lenisRef.current, scrollTo, stop, start }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
