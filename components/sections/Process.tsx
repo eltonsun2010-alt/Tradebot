@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import { PROCESS } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
+import { GradientReveal } from "@/components/ui/GradientReveal";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 
 /**
@@ -62,9 +63,7 @@ export function Process() {
               <h2 className="text-display font-display font-extrabold text-paper">
                 <AnimatedText text="Idea to" by="word" />
                 <br />
-                <span className="font-serif text-[1.05em] font-normal italic text-gradient">
-                  inevitable.
-                </span>
+                <GradientReveal text="inevitable." className="text-[1.05em]" />
               </h2>
               <p className="mt-8 max-w-sm text-base leading-relaxed text-paper-dim md:text-lg">
                 Four phases, zero guesswork. A rhythm we&rsquo;ve refined across

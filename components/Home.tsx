@@ -9,6 +9,8 @@ import { Studio } from "@/components/sections/Studio";
 import { Services } from "@/components/sections/Services";
 import { Process } from "@/components/sections/Process";
 import { Testimonials } from "@/components/sections/Testimonials";
+import { Contact } from "@/components/sections/Contact";
+import { Footer } from "@/components/layout/Footer";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 export function Home() {
@@ -29,17 +31,10 @@ export function Home() {
         <Services />
         <Process />
         <Testimonials />
-
-        {/* Anchor stub — replaced by the Contact section next. */}
-        <section
-          id="contact"
-          className="relative flex min-h-[50vh] items-center justify-center border-t border-line section-x"
-        >
-          <p className="max-w-xl text-center font-display text-2xl text-paper-dim md:text-3xl">
-            <span className="text-paper">Contact</span> — crafted next.
-          </p>
-        </section>
+        <Contact />
       </main>
+
+      <Footer />
     </>
   );
 }

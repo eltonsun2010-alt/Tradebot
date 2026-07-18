@@ -10,6 +10,7 @@ import {
 } from "framer-motion";
 import { TESTIMONIALS } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
+import { GradientReveal } from "@/components/ui/GradientReveal";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { EASE_LUX } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -92,9 +93,7 @@ export function Testimonials() {
         </div>
         <h2 className="text-display font-display font-extrabold text-paper">
           <AnimatedText text="Trusted by the" by="word" />{" "}
-          <span className="font-serif font-normal italic text-gradient">
-            <AnimatedText text="bold." by="word" delay={0.1} />
-          </span>
+          <GradientReveal text="bold." />
         </h2>
 
         {/* 3D deck */}

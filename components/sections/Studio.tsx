@@ -10,10 +10,10 @@ import {
 } from "framer-motion";
 import { MANIFESTO, STATS, TIMELINE } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
+import { GradientReveal } from "@/components/ui/GradientReveal";
 import { ScrollRevealText } from "@/components/ui/ScrollRevealText";
 import { Counter } from "@/components/ui/Counter";
 import { Reveal } from "@/components/ui/Reveal";
-import { EASE_LUX } from "@/lib/motion";
 
 export function Studio() {
   return (
@@ -30,28 +30,8 @@ export function Studio() {
           </div>
           <h2 className="font-display text-[2.75rem] font-extrabold leading-[0.95] tracking-[-0.03em] text-paper md:text-6xl">
             <AnimatedText text="Not an agency." by="word" />
-            {/* Serif payoff. The trigger lives on the always-visible mask
-                (the inner span starts clipped, so observing it directly would
-                never fire); the gradient sits on one span so it paints. */}
-            <motion.span
-              className="mt-1 block overflow-hidden pb-[0.12em] -mb-[0.12em]"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.8 }}
-            >
-              <motion.span
-                className="inline-block font-serif text-[1.12em] font-normal italic text-gradient will-change-transform"
-                variants={{
-                  hidden: { y: "110%" },
-                  visible: {
-                    y: "0%",
-                    transition: { duration: 0.9, delay: 0.15, ease: EASE_LUX },
-                  },
-                }}
-              >
-                A workshop.
-              </motion.span>
-            </motion.span>
+            <br />
+            <GradientReveal text="A workshop." className="text-[1.12em]" />
           </h2>
         </div>
 
