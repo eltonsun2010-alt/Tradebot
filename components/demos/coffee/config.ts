@@ -34,13 +34,15 @@ export const warmSoft = "linear-gradient(160deg, #d8a48a, #8a6d4b)";
 const ux = (id: string, w = 1400) =>
   `https://images.unsplash.com/${id}?w=${w}&q=70&auto=format&fit=crop`;
 
+// High-confidence, widely-used Unsplash coffee photos (reused across slots
+// where needed for reliability; the gradient fallback covers any that stall).
 export const coffeeImg = {
   heroPour: ux("photo-1461023058943-07fcbe16d735", 1600),
   cup: ux("photo-1495474472287-4d71bcdd2085"),
   beans: ux("photo-1447933601403-0c6688de566e"),
-  cafe: ux("photo-1554118811-1e0d58224f24", 1600),
+  cafe: ux("photo-1453614512568-c4024d13c247", 1600),
   table: ux("photo-1442512595331-e89e73853f31"),
-  pourover: ux("photo-1510707577719-ae7c14805e3a"),
-  latteArt: ux("photo-1512568400610-62da28bc8a13"),
-  roast: ux("photo-1524350876685-274059332603"),
+  pourover: ux("photo-1509042239860-f550ce710b93"),
+  latteArt: ux("photo-1509042239860-f550ce710b93"),
+  roast: ux("photo-1447933601403-0c6688de566e"),
 };
