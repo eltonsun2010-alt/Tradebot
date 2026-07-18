@@ -29,6 +29,13 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Turns on GitHub Pages (Actions source) if it isn't already, so the
+      # deploy step below doesn't require any manual repo-settings toggle.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Install dependencies
         run: npm ci
 
