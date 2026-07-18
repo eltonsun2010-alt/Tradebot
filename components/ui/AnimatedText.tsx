@@ -70,7 +70,7 @@ export function AnimatedText({
           key={wi}
           className="relative inline-block overflow-hidden align-top"
           aria-hidden
-          style={{ paddingBottom: "0.18em", marginBottom: "-0.18em" }}
+          style={{ paddingBottom: "0.2em" }}
         >
           {by === "char" ? (
             word.split("").map((ch, ci) => (
