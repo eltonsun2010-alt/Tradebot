@@ -96,12 +96,12 @@ body {
 /* Fluid type helpers used across sections */
 .text-hero {
   font-size: clamp(2.5rem, 7vw, 8rem);
-  line-height: 0.94;
+  line-height: 1.02;
   letter-spacing: -0.035em;
 }
 .text-display {
   font-size: clamp(2.25rem, 6.5vw, 6rem);
-  line-height: 0.98;
+  line-height: 1.06;
   letter-spacing: -0.025em;
 }
 .text-eyebrow {
