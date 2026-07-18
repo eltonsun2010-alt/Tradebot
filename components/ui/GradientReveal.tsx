@@ -30,7 +30,7 @@ export function GradientReveal({
     >
       <motion.span
         className={cn(
-          "inline-block font-serif font-normal italic text-gradient will-change-transform",
+          "inline-block font-serif font-normal italic text-gradient",
           className
         )}
         variants={{
