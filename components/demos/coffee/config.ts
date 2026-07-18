@@ -31,19 +31,19 @@ export const coffeeConfig: DemoConfig = {
 export const warm = "linear-gradient(160deg, #c65f3f, #2b1c13)";
 export const warmSoft = "linear-gradient(160deg, #d8a48a, #8a6d4b)";
 
-const ux = (id: string, w = 1400) =>
-  `https://images.unsplash.com/${id}?w=${w}&q=70&auto=format&fit=crop`;
+// Keyword-based photos (LoremFlickr): every URL reliably returns a real photo
+// matching the keywords, so no individual link can be "wrong". `lock` keeps
+// each slot's photo stable across loads; the gradient fallback covers any stall.
+const lf = (keywords: string, lock: number) =>
+  `https://loremflickr.com/1200/1200/${keywords}?lock=${lock}`;
 
-// High-confidence, widely-used Unsplash coffee photos (reused across slots
-// where needed for reliability; the gradient fallback covers any that stall).
 export const coffeeImg = {
-  // café interior confirmed loading; use it for the hero too.
-  heroPour: ux("photo-1453614512568-c4024d13c247", 1600),
-  cup: ux("photo-1495474472287-4d71bcdd2085"),
-  beans: ux("photo-1447933601403-0c6688de566e"),
-  cafe: ux("photo-1509042239860-f550ce710b93", 1600),
-  table: ux("photo-1495474472287-4d71bcdd2085"),
-  pourover: ux("photo-1509042239860-f550ce710b93"),
-  latteArt: ux("photo-1509042239860-f550ce710b93"),
-  roast: ux("photo-1447933601403-0c6688de566e"),
+  heroPour: lf("coffee,cafe", 21),
+  cup: lf("cappuccino,coffee", 22),
+  beans: lf("coffee,beans", 23),
+  cafe: lf("cafe,coffeeshop", 24),
+  table: lf("coffee,cup,table", 25),
+  pourover: lf("coffee,brewing", 26),
+  latteArt: lf("latte,coffee", 27),
+  roast: lf("coffee,roasting", 28),
 };
