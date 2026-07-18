@@ -59,7 +59,7 @@ export function Contact() {
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Let&rsquo;s build something great</span>
           </div>
-          <h2 className="text-display font-display font-extrabold text-paper">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.02em] text-paper sm:text-5xl lg:text-6xl">
             <AnimatedText text="Your next customer is already searching." by="word" />{" "}
             <GradientReveal text="Let's make them like what they find." delay={0.1} />
           </h2>
