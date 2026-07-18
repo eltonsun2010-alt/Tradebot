@@ -23,18 +23,18 @@ export function Services() {
         <div className="md:col-span-8">
           <div className="mb-6 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
-            <span className="text-eyebrow text-paper-dim">Services</span>
+            <span className="text-eyebrow text-paper-dim">What we do</span>
           </div>
           <h2 className="text-display font-display font-extrabold text-paper">
-            <AnimatedText text="Everything a brand" by="word" />
+            <AnimatedText text="Everything your business" by="word" />
             <br />
-            <AnimatedText text="needs to feel inevitable." by="word" delay={0.08} />
+            <AnimatedText text="needs to stand out online." by="word" delay={0.08} />
           </h2>
         </div>
         <Reveal className="md:col-span-4" delay={0.15}>
           <p className="max-w-sm text-base leading-relaxed text-paper-dim md:text-lg">
-            Four disciplines, one team. We move between them without the
-            handoffs that dilute most work.
+            From first design to ongoing care — one team handling everything your
+            business needs to look sharp and run smoothly online.
           </p>
         </Reveal>
       </div>

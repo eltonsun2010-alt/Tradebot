@@ -112,11 +112,11 @@ export function FullscreenMenu({
             <div>
               <p className="text-eyebrow text-paper-faint">Get in touch</p>
               <a
-                href="mailto:hello@southpage.studio"
+                href="mailto:Contact.southpage@gmail.com"
                 data-cursor="hover"
                 className="mt-2 block font-display text-2xl text-paper transition-colors hover:text-accent-bright md:text-3xl"
               >
-                hello@southpage.studio
+                Contact.southpage@gmail.com
               </a>
             </div>
             <ul className="flex flex-wrap gap-x-8 gap-y-2">

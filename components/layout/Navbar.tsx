@@ -61,8 +61,8 @@ export function Navbar({ immediate = false }: { immediate?: boolean }) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
             </span>
-            <span className="font-display text-lg font-bold tracking-[-0.02em] text-paper">
-              Southpage
+            <span className="font-display text-lg font-bold tracking-[0.04em] text-paper">
+              SOUTHPAGE
             </span>
           </button>
 
@@ -88,7 +88,7 @@ export function Navbar({ immediate = false }: { immediate?: boolean }) {
               cursorLabel="Say hi"
               className="hidden rounded-full border border-line-strong px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:border-accent sm:inline-flex"
             >
-              Start a project
+              Get a Free Quote
             </MagneticButton>
 
             {/* Menu toggle */}
