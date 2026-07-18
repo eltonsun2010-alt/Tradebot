@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { PRICING } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { Reveal } from "@/components/ui/Reveal";
+import { MeshBackground } from "@/components/ui/MeshBackground";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { useLenis } from "@/components/providers/SmoothScrollProvider";
 import { EASE_LUX } from "@/lib/motion";
@@ -12,8 +13,9 @@ import { cn } from "@/lib/utils";
 export function Pricing() {
   const { scrollTo } = useLenis();
   return (
-    <section id="pricing" className="relative border-t border-line py-28 section-x md:py-40">
-      <div className="mx-auto max-w-3xl text-center">
+    <section id="pricing" className="relative overflow-hidden border-t border-line py-28 section-x md:py-40">
+      <MeshBackground className="opacity-50" opacity={0.5} />
+      <div className="relative mx-auto max-w-3xl text-center">
         <div className="mb-6 flex items-center justify-center gap-4">
           <span className="h-px w-12 bg-accent" />
           <span className="text-eyebrow text-paper-dim">Simple pricing</span>
@@ -31,7 +33,7 @@ export function Pricing() {
         </Reveal>
       </div>
 
-      <div className="mx-auto mt-16 grid max-w-5xl gap-6 md:grid-cols-2">
+      <div className="relative mx-auto mt-16 grid max-w-5xl gap-6 md:grid-cols-2">
         {PRICING.map((p, i) => (
           <motion.div
             key={p.name}
@@ -96,7 +98,7 @@ export function Pricing() {
         ))}
       </div>
 
-      <Reveal delay={0.1}>
+      <Reveal delay={0.1} className="relative">
         <p className="mx-auto mt-12 max-w-xl text-center text-sm leading-relaxed text-paper-dim">
           Not sure which package is right for you? Let&rsquo;s have a conversation
           and recommend the best fit. No hidden fees. No unnecessary extras. Just
