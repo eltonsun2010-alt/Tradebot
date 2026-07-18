@@ -37,11 +37,12 @@ const ux = (id: string, w = 1400) =>
 // High-confidence, widely-used Unsplash coffee photos (reused across slots
 // where needed for reliability; the gradient fallback covers any that stall).
 export const coffeeImg = {
-  heroPour: ux("photo-1461023058943-07fcbe16d735", 1600),
+  // café interior confirmed loading; use it for the hero too.
+  heroPour: ux("photo-1453614512568-c4024d13c247", 1600),
   cup: ux("photo-1495474472287-4d71bcdd2085"),
   beans: ux("photo-1447933601403-0c6688de566e"),
-  cafe: ux("photo-1453614512568-c4024d13c247", 1600),
-  table: ux("photo-1442512595331-e89e73853f31"),
+  cafe: ux("photo-1509042239860-f550ce710b93", 1600),
+  table: ux("photo-1495474472287-4d71bcdd2085"),
   pourover: ux("photo-1509042239860-f550ce710b93"),
   latteArt: ux("photo-1509042239860-f550ce710b93"),
   roast: ux("photo-1447933601403-0c6688de566e"),
