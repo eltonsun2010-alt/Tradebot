@@ -86,178 +86,43 @@ export const PROJECT_FIELDS = [
 export type ProjectField = (typeof PROJECT_FIELDS)[number];
 
 /*
-  PROJECTS double as the Work list and the /work/[slug] case-study pages.
-  Copy here is polished PLACEHOLDER content — swap client, results and the
-  overview/challenge/approach/outcome text for real project details.
+  PROJECTS are the studio's showcase. Each links to a full, standalone demo
+  website (see app/demos/*). Distinct topic, palette and design per project.
 */
 export const PROJECTS = [
   {
-    id: "aurora",
-    title: "Aurora",
-    category: "Fintech Platform",
-    field: "Product",
-    tagline: "A banking experience that finally feels human.",
-    year: "2025",
-    accent: "#3b82f6",
-    layout: "dashboard",
-    client: "Aurora Financial",
-    timeframe: "12 weeks",
-    services: ["Product Strategy", "UX / UI", "Development"],
-    deliverables: ["Design system", "iOS & web app", "Marketing site"],
-    overview:
-      "Aurora wanted personal banking to feel calm instead of clinical. We rebuilt the experience end to end — from first impression to daily use — around clarity, trust and a little quiet delight.",
-    challenge:
-      "The old product buried its best features under dense menus, and new users dropped off before ever funding an account. Growth had stalled and the brand felt like every other bank.",
-    approach:
-      "We led with a single, opinionated flow: one clear next step on every screen. A restrained visual system, generous space and motion that guides rather than decorates made the product feel effortless and premium.",
-    outcome:
-      "Onboarding became something people finished. The redesign gave Aurora a distinct voice in a crowded market and a foundation their team could extend for years.",
-    results: [
-      { value: 2, suffix: "×", label: "Signup conversion" },
-      { value: 38, suffix: "%", label: "Faster onboarding" },
-      { value: 4, suffix: ".9★", label: "App store rating" },
-    ],
+    id: 'ember',
+    title: 'Ember & Oak',
+    category: 'Coffee Roaster',
+    tagline: 'Small-batch coffee, roasted with patience.',
+    year: '2025',
+    accent: '#c65f3f',
+    layout: 'editorial',
+    demo: '/demos/coffee',
   },
   {
-    id: "monolith",
-    title: "Monolith",
-    category: "Architecture Studio",
-    field: "Brand",
-    tagline: "An identity as considered as the buildings.",
-    year: "2025",
-    accent: "#7c3aed",
-    layout: "portfolio",
-    client: "Monolith Studio",
-    timeframe: "8 weeks",
-    services: ["Brand Identity", "Art Direction", "Web Design"],
-    deliverables: ["Visual identity", "Portfolio site", "Print system"],
-    overview:
-      "An award-winning architecture practice with a forgettable brand. We built an identity as precise and material as their work, then gave it a home that lets the projects breathe.",
-    challenge:
-      "Their portfolio read like a folder of photos. Nothing carried the weight or restraint of the buildings themselves, and prospective clients couldn't feel the craft.",
-    approach:
-      "A confident grotesk wordmark, an architectural grid, and full-bleed imagery framed by silence. Every interaction is slow and deliberate — the site behaves the way their buildings feel.",
-    outcome:
-      "Monolith now presents like the studio it is. The new identity travels from business cards to billboards without losing an ounce of intent.",
-    results: [
-      { value: 3, suffix: "×", label: "Enquiry quality" },
-      { value: 60, suffix: "%", label: "Longer sessions" },
-      { value: 2, suffix: " awards", label: "Design recognition" },
-    ],
+    id: 'marlowe',
+    title: 'Marlowe Dental',
+    category: 'Dental Studio',
+    tagline: 'Modern dentistry that finally feels calm.',
+    year: '2025',
+    accent: '#14b8a6',
+    layout: 'dashboard',
+    demo: '/demos/dental',
   },
   {
-    id: "halcyon",
-    title: "Halcyon",
-    category: "Luxury Travel",
-    field: "Editorial",
-    tagline: "Slow journeys, told at the pace they deserve.",
-    year: "2024",
-    accent: "#0ea5e9",
-    layout: "editorial",
-    client: "Halcyon Journeys",
-    timeframe: "10 weeks",
-    services: ["Editorial Design", "Art Direction", "Development"],
-    deliverables: ["Editorial site", "Booking flow", "Content system"],
-    overview:
-      "Halcyon curates unhurried, high-touch travel. We designed an editorial experience that sells the feeling of a place first and the itinerary second.",
-    challenge:
-      "Luxury travel sites all look the same — grids of stock photos and urgency banners. Halcyon needed to feel like a beautifully printed magazine you never want to close.",
-    approach:
-      "Long-form storytelling, cinematic imagery and typographic rhythm carry each destination. Booking is present but never pushy, folded gently into the narrative.",
-    outcome:
-      "Guests arrive already sold on the experience. The site became Halcyon's strongest sales tool — and its most shared.",
-    results: [
-      { value: 55, suffix: "%", label: "More enquiries" },
-      { value: 2, suffix: "×", label: "Time on page" },
-      { value: 30, suffix: "%", label: "Higher booking value" },
-    ],
-  },
-  {
-    id: "vesper",
-    title: "Vesper",
-    category: "Fashion House",
-    field: "Commerce",
-    tagline: "A boutique that sells the way it dresses.",
-    year: "2024",
-    accent: "#a855f7",
-    layout: "commerce",
-    client: "Vesper Atelier",
-    timeframe: "9 weeks",
-    services: ["E-commerce", "Art Direction", "Development"],
-    deliverables: ["Storefront", "Lookbook", "Checkout"],
-    overview:
-      "Vesper makes considered, seasonless clothing. We built a storefront that treats commerce as editorial — where browsing feels like flipping through a lookbook, not filling a cart.",
-    challenge:
-      "A generic template flattened the brand and leaked sales at checkout. The clothes felt expensive; the shopping experience didn't.",
-    approach:
-      "Editorial product pages, tactile hover states and a checkout stripped to the essentials. Every detail — type, motion, pacing — echoes the atelier's restraint.",
-    outcome:
-      "The store now feels like the brand. Shoppers browse longer, trust more, and abandon less.",
-    results: [
-      { value: 46, suffix: "%", label: "Revenue lift" },
-      { value: 27, suffix: "%", label: "Less cart drop-off" },
-      { value: 2, suffix: "×", label: "Return visitors" },
-    ],
-  },
-  {
-    id: "cascade",
-    title: "Cascade",
-    category: "SaaS Analytics",
-    field: "Product",
-    tagline: "Data that reads like a story, not a spreadsheet.",
-    year: "2023",
-    accent: "#22d3ee",
-    layout: "analytics",
-    client: "Cascade Analytics",
-    timeframe: "14 weeks",
-    services: ["Product Design", "Design System", "Development"],
-    deliverables: ["Dashboard", "Design system", "Docs"],
-    overview:
-      "Cascade turns messy product data into clear decisions. We redesigned the dashboard so the important signal is always the loudest thing on screen.",
-    challenge:
-      "Power was there, but buried. New users were overwhelmed and churned inside a week, never reaching the aha moment.",
-    approach:
-      "A calm, layered interface: headline metrics first, detail on demand. A rigorous design system kept dozens of charts feeling like one considered product.",
-    outcome:
-      "Teams understand their data faster and stick around. Cascade finally looks as sharp as it is capable.",
-    results: [
-      { value: 42, suffix: "%", label: "Better retention" },
-      { value: 3, suffix: "×", label: "Faster to insight" },
-      { value: 95, suffix: "+", label: "Lighthouse score" },
-    ],
-  },
-  {
-    id: "atlas",
-    title: "Atlas",
-    category: "Property Group",
-    field: "Brand",
-    tagline: "A portfolio of places, unified under one mark.",
-    year: "2023",
-    accent: "#6366f1",
-    layout: "estate",
-    client: "Atlas Group",
-    timeframe: "11 weeks",
-    services: ["Brand Identity", "Web Design", "Development"],
-    deliverables: ["Master brand", "Property sites", "Guidelines"],
-    overview:
-      "Atlas develops distinctive places across a dozen cities. We built a flexible master brand that unifies a diverse portfolio without flattening what makes each property special.",
-    challenge:
-      "Every development had its own logo, tone and site. The group had no coherent presence, and cross-selling between properties was impossible.",
-    approach:
-      "A confident master brand with room to flex per property — a shared system of type, grid and motion that scales from the group down to a single building.",
-    outcome:
-      "Atlas now reads as one considered group. New properties launch in days, not months, on a system that already feels premium.",
-    results: [
-      { value: 12, suffix: " sites", label: "Unified in one system" },
-      { value: 70, suffix: "%", label: "Faster launches" },
-      { value: 2, suffix: "×", label: "Brand recall" },
-    ],
+    id: 'pulse',
+    title: 'Pulse',
+    category: 'Strength Studio',
+    tagline: 'Train loud. Move fast. Feel unstoppable.',
+    year: '2025',
+    accent: '#bef264',
+    layout: 'analytics',
+    demo: '/demos/fitness',
   },
 ] as const;
 
 export type Project = (typeof PROJECTS)[number];
-
-export const getProject = (id: string) => PROJECTS.find((p) => p.id === id);
 
 export const PROCESS = [
   {
