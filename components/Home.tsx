@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Loader } from "@/components/sections/Loader";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/sections/Hero";
+import { Work } from "@/components/sections/Work";
+import { Studio } from "@/components/sections/Studio";
+import { Services } from "@/components/sections/Services";
+import { Process } from "@/components/sections/Process";
+import { Testimonials } from "@/components/sections/Testimonials";
+import { Contact } from "@/components/sections/Contact";
+import { Footer } from "@/components/layout/Footer";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 export function Home() {
@@ -19,21 +26,15 @@ export function Home() {
 
       <main>
         <Hero play={loaded} />
-
-        {/* Anchor stubs — replaced by full sections in the next milestones. */}
-        <section
-          id="work"
-          className="relative flex min-h-[60vh] items-center justify-center border-t border-line section-x"
-        >
-          <p className="max-w-xl text-center font-display text-2xl text-paper-dim md:text-3xl">
-            The rest of the experience —{" "}
-            <span className="text-paper">Work, Studio, Services, Process</span>{" "}
-            and <span className="text-paper">Contact</span> — is being crafted
-            section by section.
-          </p>
-        </section>
-        <section id="contact" className="h-px" aria-hidden />
+        <Work />
+        <Studio />
+        <Services />
+        <Process />
+        <Testimonials />
+        <Contact />
       </main>
+
+      <Footer />
     </>
   );
 }

@@ -18,6 +18,32 @@ export const STATS = [
   { value: 98, suffix: "%", label: "Client retention" },
 ] as const;
 
+export const MANIFESTO =
+  "We are a small studio with a large obsession — interfaces that move like they mean it. Design is how it works. Motion is how it feels. The details are the whole thing. Every project is engineered to feel expensive, and to convert like it.";
+
+export const TIMELINE = [
+  {
+    year: "2019",
+    title: "Founded",
+    body: "Southpage opens with three people and one belief — the web could feel far better than it does.",
+  },
+  {
+    year: "2021",
+    title: "Became a studio",
+    body: "Strategy, design and engineering come under one roof, so nothing gets lost in translation.",
+  },
+  {
+    year: "2023",
+    title: "Recognised",
+    body: "Awwwards, CSSDA and a client roster that now spans four continents and three industries.",
+  },
+  {
+    year: "2025",
+    title: "Today",
+    body: "A tight senior team shipping cinematic work for brands that refuse to blend in.",
+  },
+] as const;
+
 export const SERVICES = [
   {
     index: "01",
@@ -49,11 +75,23 @@ export const SERVICES = [
   },
 ] as const;
 
+export const PROJECT_FIELDS = [
+  "All",
+  "Product",
+  "Brand",
+  "Commerce",
+  "Editorial",
+] as const;
+
+export type ProjectField = (typeof PROJECT_FIELDS)[number];
+
 export const PROJECTS = [
   {
     id: "aurora",
     title: "Aurora",
     category: "Fintech Platform",
+    field: "Product",
+    tagline: "A banking experience that finally feels human.",
     year: "2025",
     accent: "#3b82f6",
   },
@@ -61,6 +99,8 @@ export const PROJECTS = [
     id: "monolith",
     title: "Monolith",
     category: "Architecture Studio",
+    field: "Brand",
+    tagline: "An identity as considered as the buildings.",
     year: "2025",
     accent: "#7c3aed",
   },
@@ -68,6 +108,8 @@ export const PROJECTS = [
     id: "halcyon",
     title: "Halcyon",
     category: "Luxury Travel",
+    field: "Editorial",
+    tagline: "Slow journeys, told at the pace they deserve.",
     year: "2024",
     accent: "#0ea5e9",
   },
@@ -75,8 +117,28 @@ export const PROJECTS = [
     id: "vesper",
     title: "Vesper",
     category: "Fashion House",
+    field: "Commerce",
+    tagline: "A boutique that sells the way it dresses.",
     year: "2024",
     accent: "#a855f7",
+  },
+  {
+    id: "cascade",
+    title: "Cascade",
+    category: "SaaS Analytics",
+    field: "Product",
+    tagline: "Data that reads like a story, not a spreadsheet.",
+    year: "2023",
+    accent: "#22d3ee",
+  },
+  {
+    id: "atlas",
+    title: "Atlas",
+    category: "Property Group",
+    field: "Brand",
+    tagline: "A portfolio of places, unified under one mark.",
+    year: "2023",
+    accent: "#6366f1",
   },
 ] as const;
 
