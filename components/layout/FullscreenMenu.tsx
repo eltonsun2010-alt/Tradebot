@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { usePathname, useRouter } from "next/navigation";
 import { NAV_LINKS, SOCIALS } from "@/lib/data";
 import { useLenis } from "@/components/providers/SmoothScrollProvider";
 import { EASE_CURTAIN, EASE_LUX } from "@/lib/motion";
@@ -38,6 +39,8 @@ export function FullscreenMenu({
   onClose: () => void;
 }) {
   const { scrollTo } = useLenis();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -47,7 +50,8 @@ export function FullscreenMenu({
 
   const go = (href: string) => {
     onClose();
-    setTimeout(() => scrollTo(href), 500);
+    if (pathname === "/") setTimeout(() => scrollTo(href), 500);
+    else setTimeout(() => router.push(`/${href}`), 500);
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import {
   AnimatePresence,
   motion,
@@ -101,8 +102,8 @@ export function Work() {
               onMouseLeave={() => setHovered(null)}
               className="group relative border-b border-line"
             >
-              <a
-                href="#contact"
+              <Link
+                href={`/work/${p.id}`}
                 data-cursor={touch ? undefined : "hover"}
                 className="relative grid grid-cols-[auto_1fr_auto] items-center gap-4 py-6 md:gap-8 md:py-8"
               >
@@ -153,7 +154,7 @@ export function Work() {
                     <Arrow />
                   </span>
                 </div>
-              </a>
+              </Link>
             </motion.li>
           ))}
         </AnimatePresence>

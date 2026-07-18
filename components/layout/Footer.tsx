@@ -1,12 +1,21 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { NAV_LINKS, SOCIALS } from "@/lib/data";
 import { useLenis } from "@/components/providers/SmoothScrollProvider";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
 export function Footer() {
   const { scrollTo } = useLenis();
+  const pathname = usePathname();
+  const router = useRouter();
   const year = new Date().getFullYear();
+
+  // Smooth-scroll on the home page; otherwise route home to the anchor.
+  const goTo = (href: string | number) => {
+    if (pathname === "/") scrollTo(href);
+    else router.push(typeof href === "number" ? "/" : `/${href}`);
+  };
 
   return (
     <footer className="relative overflow-hidden border-t border-line bg-ink-soft pt-20 section-x">
@@ -25,7 +34,7 @@ export function Footer() {
           </p>
           <MagneticButton
             as="button"
-            onClick={() => scrollTo("#contact")}
+            onClick={() => goTo("#contact")}
             cursorLabel="Say hi"
             className="mt-8 rounded-full border border-line-strong px-6 py-3 text-sm font-medium text-paper transition-colors hover:border-accent"
           >
@@ -40,7 +49,7 @@ export function Footer() {
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
                 <button
-                  onClick={() => scrollTo(link.href)}
+                  onClick={() => goTo(link.href)}
                   data-cursor="hover"
                   className="group relative text-paper-dim transition-colors hover:text-paper"
                 >
@@ -88,7 +97,7 @@ export function Footer() {
         <p>© {year} Southpage Studio. All rights reserved.</p>
         <p>Design &amp; build in-house.</p>
         <button
-          onClick={() => scrollTo(0)}
+          onClick={() => goTo(0)}
           data-cursor="hover"
           className="group flex items-center gap-2 text-paper-dim transition-colors hover:text-paper"
         >
