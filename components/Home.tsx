@@ -8,6 +8,7 @@ import { Work } from "@/components/sections/Work";
 import { Studio } from "@/components/sections/Studio";
 import { Services } from "@/components/sections/Services";
 import { Process } from "@/components/sections/Process";
+import { Testimonials } from "@/components/sections/Testimonials";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 export function Home() {
@@ -27,18 +28,17 @@ export function Home() {
         <Studio />
         <Services />
         <Process />
+        <Testimonials />
 
-        {/* Anchor stubs — replaced by full sections in the next milestones. */}
+        {/* Anchor stub — replaced by the Contact section next. */}
         <section
-          id="testimonials"
+          id="contact"
           className="relative flex min-h-[50vh] items-center justify-center border-t border-line section-x"
         >
           <p className="max-w-xl text-center font-display text-2xl text-paper-dim md:text-3xl">
-            <span className="text-paper">Testimonials</span> and{" "}
             <span className="text-paper">Contact</span> — crafted next.
           </p>
         </section>
-        <section id="contact" className="h-px" aria-hidden />
       </main>
     </>
   );
