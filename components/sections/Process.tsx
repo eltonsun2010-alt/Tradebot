@@ -58,16 +58,17 @@ export function Process() {
             <div className="flex shrink-0 flex-col justify-center md:h-full md:w-[52vw] md:px-[6vw]">
               <div className="mb-6 flex items-center gap-4">
                 <span className="h-px w-12 bg-accent" />
-                <span className="text-eyebrow text-paper-dim">The Process</span>
+                <span className="text-eyebrow text-paper-dim">Our process</span>
               </div>
               <h2 className="text-display font-display font-extrabold text-paper">
-                <AnimatedText text="Idea to" by="word" />
+                <AnimatedText text="Simple &" by="word" />
                 <br />
-                <GradientReveal text="inevitable." className="text-[1.05em]" />
+                <GradientReveal text="transparent." className="text-[1.05em]" />
               </h2>
               <p className="mt-8 max-w-sm text-base leading-relaxed text-paper-dim md:text-lg">
-                Four phases, zero guesswork. A rhythm we&rsquo;ve refined across
-                a hundred launches.
+                Every project follows a clear path from start to finish. No
+                confusion, no surprises — just a straightforward route to a
+                website you&rsquo;re proud to launch.
               </p>
               <div className="mt-10 hidden items-center gap-3 text-eyebrow text-paper-faint md:flex">
                 <span>Scroll</span>
