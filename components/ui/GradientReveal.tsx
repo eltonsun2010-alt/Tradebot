@@ -23,7 +23,7 @@ export function GradientReveal({
 }) {
   return (
     <motion.span
-      className="inline-block overflow-hidden pb-[0.14em] align-bottom"
+      className="inline-block overflow-hidden pb-[0.2em] align-top"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.6 }}
