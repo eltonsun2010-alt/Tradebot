@@ -70,12 +70,12 @@ export function AnimatedText({
         <span key={wi} className="relative inline-block" aria-hidden>
           {by === "char" ? (
             word.split("").map((ch, ci) => (
-              <motion.span key={ci} variants={child} className="inline-block will-change-transform">
+              <motion.span key={ci} variants={child} className="inline-block">
                 {ch}
               </motion.span>
             ))
           ) : (
-            <motion.span variants={child} className="inline-block will-change-transform">
+            <motion.span variants={child} className="inline-block">
               {word}
             </motion.span>
           )}
