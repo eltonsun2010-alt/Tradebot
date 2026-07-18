@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { fraunces } from "@/app/fonts";
-import { CoffeeDemo } from "@/components/demos/CoffeeDemo";
+import { CoffeeHome } from "@/components/demos/coffee/CoffeeHome";
 
 export const metadata: Metadata = {
   title: "Ember & Oak — Coffee Roaster (Demo)",
@@ -8,9 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return (
-    <div className={fraunces.variable}>
-      <CoffeeDemo />
-    </div>
-  );
+  return <div className={fraunces.variable}><CoffeeHome /></div>;
 }
