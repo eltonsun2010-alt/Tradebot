@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["claude/southpage-portfolio-site-gwk4lo"]
+    branches: ["claude/southpage-portfolio-site-nbnb0w"]
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages.

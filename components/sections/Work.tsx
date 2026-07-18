@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import {
   AnimatePresence,
   motion,
@@ -101,8 +102,8 @@ export function Work() {
               onMouseLeave={() => setHovered(null)}
               className="group relative border-b border-line"
             >
-              <a
-                href="#contact"
+              <Link
+                href={`/work/${p.id}`}
                 data-cursor={touch ? undefined : "hover"}
                 className="relative grid grid-cols-[auto_1fr_auto] items-center gap-4 py-6 md:gap-8 md:py-8"
               >
@@ -133,7 +134,7 @@ export function Work() {
                   {/* Inline mockup — mobile / touch only */}
                   {touch && (
                     <div className="mt-5 h-52 w-full">
-                      <ProjectMockup accent={p.accent} variant={p.i} />
+                      <ProjectMockup accent={p.accent} layout={p.layout} />
                     </div>
                   )}
                 </div>
@@ -153,7 +154,7 @@ export function Work() {
                     <Arrow />
                   </span>
                 </div>
-              </a>
+              </Link>
             </motion.li>
           ))}
         </AnimatePresence>
@@ -179,7 +180,7 @@ export function Work() {
               >
                 <ProjectMockup
                   accent={active.accent}
-                  variant={hovered ?? 0}
+                  layout={active.layout}
                   className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]"
                 />
                 <p className="mt-3 text-center font-serif text-lg italic text-paper-dim">
