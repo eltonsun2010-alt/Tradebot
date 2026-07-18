@@ -3,7 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import { ShaderBackground } from "./ShaderBackground";
-import { Particles } from "./Particles";
+import { MorphParticles } from "./MorphParticles";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
@@ -51,7 +51,7 @@ export default function HeroCanvas() {
         frameloop={active ? "always" : "never"}
       >
         <ShaderBackground />
-        {!reduced && <Particles count={mobile ? 200 : 320} />}
+        {!reduced && <MorphParticles count={mobile ? 1800 : 4200} />}
       </Canvas>
     </div>
   );
