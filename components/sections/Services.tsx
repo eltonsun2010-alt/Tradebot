@@ -1,17 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import {
   motion,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
+  type MotionValue,
 } from "framer-motion";
 import { SERVICES } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { Reveal } from "@/components/ui/Reveal";
 import { useIsMobile, useIsTouch } from "@/hooks/useMediaQuery";
+
+const LightHelixCanvas = dynamic(() => import("@/components/canvas/LightHelixCanvas"), {
+  ssr: false,
+});
 
 const ICONS: ReactNode[] = [
   // 01 Custom Website Design — pen / craft
@@ -33,105 +39,187 @@ const ICONS: ReactNode[] = [
   </>,
 ];
 
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+const Heading = () => (
+  <div>
+    <div className="mb-6 flex items-center gap-4">
+      <span className="h-px w-12 bg-accent" />
+      <span className="text-eyebrow text-paper-dim">What we do</span>
+    </div>
+    <h2 className="max-w-2xl text-display font-display font-extrabold text-paper">
+      <AnimatedText text="Everything your business" by="word" />
+      <br />
+      <AnimatedText text="needs to stand out online." by="word" delay={0.08} />
+    </h2>
+  </div>
+);
+
 export function Services() {
+  const reduced = useReducedMotion();
+  const mobile = useIsMobile();
+
+  if (reduced || mobile) return <ServicesFallback showHelix={!reduced} />;
+  return <ServicesOrbit />;
+}
+
+/* --------------------------- desktop: orbit --------------------------- */
+const RADIUS = 340;
+const TURNS = 1; // one full circulation of the cards over the section
+
+function ServicesOrbit() {
+  const trackRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: trackRef,
+    offset: ["start start", "end end"],
+  });
+
   return (
-    <section id="services" className="relative border-t border-line py-28 section-x md:py-40">
-      <div className="grid gap-8 md:grid-cols-12 md:items-end">
-        <div className="md:col-span-8">
-          <div className="mb-6 flex items-center gap-4">
+    <section
+      id="services"
+      ref={trackRef}
+      className="relative border-t border-line"
+      style={{ height: "340vh" }}
+    >
+      <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden section-x">
+        {/* compact heading, pinned top-left */}
+        <div className="absolute inset-x-0 top-0 z-40 section-x pt-28">
+          <div className="mb-5 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">What we do</span>
           </div>
-          <h2 className="text-display font-display font-extrabold text-paper">
-            <AnimatedText text="Everything your business" by="word" />
-            <br />
-            <AnimatedText text="needs to stand out online." by="word" delay={0.08} />
+          <h2 className="max-w-lg font-display text-3xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-4xl">
+            Everything your business needs to stand out online.
           </h2>
         </div>
-        <Reveal className="md:col-span-4" delay={0.15}>
-          <p className="max-w-sm text-base leading-relaxed text-paper-dim md:text-lg">
-            From first design to ongoing care — one team handling everything your
-            business needs to look sharp and run smoothly online.
-          </p>
-        </Reveal>
-      </div>
 
-      {/* Cards swing in on a 3D helix — each one rotates to face you as it
-          scrolls to the centre of the viewport. */}
-      <div className="relative mt-10 md:mt-16">
-        {SERVICES.map((service, i) => (
-          <HelixItem key={service.index}>
-            <ServiceCard
-              index={i}
-              icon={ICONS[i]}
-              label={service.index}
-              title={service.title}
-              body={service.summary}
-              features={service.tags}
-            />
-          </HelixItem>
-        ))}
+        {/* central light helix */}
+        <div className="absolute left-1/2 top-1/2 z-[5] h-[86%] w-[46%] -translate-x-1/2 -translate-y-1/2">
+          <LightHelixCanvas eventSource={trackRef} />
+        </div>
+
+        {/* orbiting cards */}
+        <div className="absolute left-1/2 top-1/2 z-10 [perspective:1500px]">
+          <div className="relative [transform-style:preserve-3d]">
+            {SERVICES.map((service, i) => (
+              <OrbitCard
+                key={service.index}
+                base={(i / SERVICES.length) * 360}
+                progress={scrollYProgress}
+                icon={ICONS[i]}
+                label={service.index}
+                title={service.title}
+                body={service.summary}
+                features={service.tags}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* scroll hint */}
+        <span className="absolute bottom-8 left-1/2 z-40 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-paper-faint">
+          Scroll to explore our services
+        </span>
       </div>
     </section>
   );
 }
 
-/** One slot on the helix. Its own scroll progress drives a 3D swing so the
- *  card rotates in from the side, faces the viewer at centre, then swings out. */
-function HelixItem({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
-  const mobile = useIsMobile();
+function OrbitCard({
+  base,
+  progress,
+  icon,
+  label,
+  title,
+  body,
+  features,
+}: {
+  base: number;
+  progress: MotionValue<number>;
+  icon: ReactNode;
+  label: string;
+  title: string;
+  body: string;
+  features: readonly string[];
+}) {
+  const angleDeg = (p: number) => base - p * TURNS * 360;
+  const [front, setFront] = useState(base === 0);
 
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
+  useMotionValueEvent(progress, "change", (p) => {
+    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
+    setFront(f > 0.9);
   });
 
-  const RY = mobile ? 40 : 54;
-  const TX = mobile ? 70 : 170;
-  const TZ = mobile ? 150 : 260;
-
-  const rotateY = useSpring(
-    useTransform(scrollYProgress, [0, 0.5, 1], [RY, 0, -RY]),
-    { stiffness: 110, damping: 22 }
-  );
-  const x = useSpring(
-    useTransform(scrollYProgress, [0, 0.5, 1], [TX, 0, -TX]),
-    { stiffness: 110, damping: 22 }
-  );
-  const z = useSpring(
-    useTransform(scrollYProgress, [0, 0.5, 1], [-TZ, 0, -TZ]),
-    { stiffness: 110, damping: 24 }
-  );
-  const opacity = useTransform(scrollYProgress, [0, 0.26, 0.5, 0.74, 1], [0, 0.6, 1, 0.6, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.82, 1, 0.82]);
-
-  if (reduced) {
-    return (
-      <div ref={ref} className="mx-auto max-w-md py-6">
-        {children}
-      </div>
-    );
-  }
+  const transform = useTransform(progress, (p) => {
+    const a = angleDeg(p);
+    const f = Math.cos((a * Math.PI) / 180);
+    const s = 0.78 + 0.22 * Math.max(0, f);
+    return `translate(-50%, -50%) rotateY(${a}deg) translateZ(${RADIUS}px) scale(${s})`;
+  });
+  const opacity = useTransform(progress, (p) => {
+    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
+    return 0.08 + 0.92 * smoothstep(-0.25, 0.85, f);
+  });
+  const zIndex = useTransform(progress, (p) => {
+    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
+    return f > 0.05 ? 12 + Math.round(f * 12) : 1;
+  });
+  const pointerEvents = useTransform(progress, (p) => {
+    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
+    return f > 0.85 ? "auto" : "none";
+  }) as unknown as MotionValue<"auto" | "none">;
 
   return (
-    <div
-      ref={ref}
-      className="flex min-h-[46vh] items-center justify-center [perspective:1200px]"
+    <motion.div
+      className="absolute left-1/2 top-1/2 w-[300px] [transform-style:preserve-3d]"
+      style={{ transform, opacity, zIndex, pointerEvents, backfaceVisibility: "hidden" }}
     >
-      <motion.div
-        style={{ rotateY, x, z, opacity, scale, transformStyle: "preserve-3d" }}
-        className="w-full max-w-md"
-      >
-        {children}
-      </motion.div>
-    </div>
+      <ServiceCard icon={icon} label={label} title={title} body={body} features={features} forceOpen={front} />
+    </motion.div>
   );
 }
 
-/** Collapsed header (icon + title) — rendered both as the interactive card's
- *  top and, invisibly, as a "ghost" so the grid cell keeps a fixed height. */
+/* ------------------- mobile / reduced-motion fallback ------------------- */
+function ServicesFallback({ showHelix }: { showHelix: boolean }) {
+  const ref = useRef<HTMLElement>(null);
+  return (
+    <section id="services" ref={ref} className="relative overflow-hidden border-t border-line py-28 section-x md:py-40">
+      {showHelix && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-60"
+          style={{
+            WebkitMaskImage: "radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 80%)",
+            maskImage: "radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 80%)",
+          }}
+        >
+          <LightHelixCanvas eventSource={ref} />
+        </div>
+      )}
+      <div className="relative">
+        <Heading />
+        <div className="mt-14 mx-auto grid max-w-md gap-5">
+          {SERVICES.map((service, i) => (
+            <Reveal key={service.index} delay={(i % 2) * 0.08}>
+              <ServiceCard
+                index={i}
+                icon={ICONS[i]}
+                label={service.index}
+                title={service.title}
+                body={service.summary}
+                features={service.tags}
+              />
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------ the card ------------------------------ */
 function Header({ icon, label, open }: { icon: ReactNode; label: string; open: boolean }) {
   return (
     <div className="flex items-start justify-between">
@@ -145,10 +233,7 @@ function Header({ icon, label, open }: { icon: ReactNode; label: string; open: b
           {icon}
         </svg>
       </motion.span>
-      <motion.span
-        animate={{ opacity: open ? 1 : 0.35 }}
-        className="font-display text-3xl font-bold text-paper-faint"
-      >
+      <motion.span animate={{ opacity: open ? 1 : 0.35 }} className="font-display text-3xl font-bold text-paper-faint">
         {label}
       </motion.span>
     </div>
@@ -156,24 +241,25 @@ function Header({ icon, label, open }: { icon: ReactNode; label: string; open: b
 }
 
 function ServiceCard({
-  index,
   icon,
   label,
   title,
   body,
   features,
+  forceOpen = false,
 }: {
-  index: number;
+  index?: number;
   icon: ReactNode;
   label: string;
   title: string;
   body: string;
   features: readonly string[];
+  forceOpen?: boolean;
 }) {
   const touch = useIsTouch();
   const ref = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState(false);
-  const open = touch || hover;
+  const open = touch || hover || forceOpen;
 
   const onMove = (e: MouseEvent) => {
     const el = ref.current;
@@ -186,10 +272,8 @@ function ServiceCard({
   const spring = { type: "spring" as const, stiffness: 260, damping: 30 };
 
   return (
-    // The wrapper holds the grid cell's height; the card inside is absolute so
-    // expanding it never nudges neighbouring cards or the row below.
     <div className="relative">
-      {/* Ghost: same collapsed header, invisible — defines the cell height */}
+      {/* Ghost keeps the collapsed height */}
       <div aria-hidden className="invisible p-8">
         <Header icon={icon} label={label} open={false} />
         <h3 className="mt-7 font-display text-xl font-bold">{title}</h3>
@@ -204,14 +288,13 @@ function ServiceCard({
         animate={{ zIndex: open ? 30 : 1 }}
         className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-8 transition-colors duration-200"
         style={{
-          borderColor: hover ? "rgba(59,130,246,0.4)" : "var(--color-line)",
-          background: hover
-            ? "linear-gradient(160deg, rgba(59,130,246,0.08), rgba(124,58,237,0.05)), #0a0a0c"
+          borderColor: open ? "rgba(59,130,246,0.4)" : "var(--color-line)",
+          background: open
+            ? "linear-gradient(160deg, rgba(59,130,246,0.10), rgba(124,58,237,0.06)), #0a0a0c"
             : "#0a0a0c",
-          boxShadow: hover ? "0 26px 70px -28px rgba(59,130,246,0.55)" : "none",
+          boxShadow: open ? "0 26px 70px -28px rgba(59,130,246,0.55)" : "0 20px 50px -30px rgba(0,0,0,0.9)",
         }}
       >
-        {/* Cursor-tracked spotlight: soft light + a texture it reveals */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 transition-opacity duration-200"
@@ -236,7 +319,6 @@ function ServiceCard({
           <Header icon={icon} label={label} open={open} />
           <h3 className="mt-7 font-display text-xl font-bold text-paper">{title}</h3>
 
-          {/* Revealed on hover: description, feature list, CTA */}
           <motion.div
             initial={false}
             animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
@@ -244,7 +326,6 @@ function ServiceCard({
             className="overflow-hidden"
           >
             <p className="pt-4 text-sm leading-relaxed text-paper-dim">{body}</p>
-
             <ul className="mt-5 space-y-2.5">
               {features.map((f) => (
                 <li key={f} className="flex items-center gap-3 text-sm text-paper">
@@ -255,7 +336,6 @@ function ServiceCard({
                 </li>
               ))}
             </ul>
-
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-accent-bright">
               <motion.span animate={{ x: open ? 0 : -8, opacity: open ? 1 : 0 }} transition={spring}>
                 Learn more
