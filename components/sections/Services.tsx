@@ -1,18 +1,24 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   motion,
-  useMotionValueEvent,
+  motionValue,
+  useAnimationFrame,
   useReducedMotion,
-  useScroll,
+  useSpring,
   useTransform,
   type MotionValue,
 } from "framer-motion";
 import { SERVICES } from "@/lib/data";
-import { AnimatedText } from "@/components/ui/AnimatedText";
-import { Reveal } from "@/components/ui/Reveal";
 import { useIsMobile, useIsTouch } from "@/hooks/useMediaQuery";
 
 const LightHelixCanvas = dynamic(() => import("@/components/canvas/LightHelixCanvas"), {
@@ -20,18 +26,13 @@ const LightHelixCanvas = dynamic(() => import("@/components/canvas/LightHelixCan
 });
 
 const ICONS: ReactNode[] = [
-  // 01 Custom Website Design — pen / craft
   <path key="a" d="M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16l-1 4zM14 6l3 3" />,
-  // 02 Website Development — code brackets
   <path key="b" d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 5l-2 14" />,
-  // 03 Business Automation — gear
   <>
     <circle key="c1" cx="12" cy="12" r="3" />
     <path key="c2" d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" />
   </>,
-  // 04 Website Redesign — refresh
   <path key="d" d="M4 12a8 8 0 0 1 13.7-5.6L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.7 5.6L4 16M4 20v-4h4" />,
-  // 05 Ongoing Support — lifebuoy
   <>
     <circle key="e1" cx="12" cy="12" r="9" />
     <circle key="e2" cx="12" cy="12" r="3.5" />
@@ -39,181 +40,221 @@ const ICONS: ReactNode[] = [
   </>,
 ];
 
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
-
 const Heading = () => (
-  <div>
-    <div className="mb-6 flex items-center gap-4">
+  <>
+    <div className="mb-5 flex items-center gap-4">
       <span className="h-px w-12 bg-accent" />
       <span className="text-eyebrow text-paper-dim">What we do</span>
     </div>
-    <h2 className="max-w-2xl text-display font-display font-extrabold text-paper">
-      <AnimatedText text="Everything your business" by="word" />
-      <br />
-      <AnimatedText text="needs to stand out online." by="word" delay={0.08} />
+    <h2 className="max-w-lg font-display text-3xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-4xl">
+      Everything your business needs to stand out online.
     </h2>
-  </div>
+  </>
 );
 
 export function Services() {
   const reduced = useReducedMotion();
   const mobile = useIsMobile();
-
-  if (reduced || mobile) return <ServicesFallback showHelix={!reduced} />;
+  if (mobile || reduced) return <ServicesCarousel showHelix={!reduced} />;
   return <ServicesOrbit />;
 }
 
-/* --------------------------- desktop: orbit --------------------------- */
-const RADIUS = 340;
-const TURNS = 1; // one full circulation of the cards over the section
+/* ------------------------- desktop: living orbit ------------------------- */
+const N = SERVICES.length;
+const RX = 300; // horizontal orbit radius
+const RZ = 185; // depth radius
 
 function ServicesOrbit() {
-  const trackRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: trackRef,
-    offset: ["start start", "end end"],
+  const stageRef = useRef<HTMLElement>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const anyHoveredRef = useRef(false);
+  const visibleRef = useRef(true);
+
+  useEffect(() => {
+    anyHoveredRef.current = hovered !== null;
+  }, [hovered]);
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => (visibleRef.current = entry.isIntersecting),
+      { rootMargin: "120px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const angles = useMemo(
+    () => SERVICES.map((_, i) => motionValue((i / N) * Math.PI * 2)),
+    []
+  );
+  const bases = useMemo(() => SERVICES.map((_, i) => (i / N) * Math.PI * 2), []);
+  // slightly different speeds so the motion never feels mechanical
+  const speeds = useMemo(() => [0.132, 0.116, 0.148, 0.124, 0.138], []);
+  const tRef = useRef(0);
+
+  useAnimationFrame((_, delta) => {
+    if (!visibleRef.current) return;
+    const factor = anyHoveredRef.current ? 0.12 : 1; // ease the orbit while exploring
+    tRef.current += (delta / 1000) * factor;
+    for (let i = 0; i < angles.length; i += 1) {
+      angles[i].set(bases[i] + tRef.current * speeds[i]);
+    }
   });
 
   return (
     <section
       id="services"
-      ref={trackRef}
-      className="relative border-t border-line"
-      style={{ height: "340vh" }}
+      ref={stageRef}
+      onMouseLeave={() => setHovered(null)}
+      className="relative flex min-h-screen items-center overflow-hidden border-t border-line py-28"
     >
-      <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden section-x">
-        {/* compact heading, pinned top-left */}
-        <div className="absolute inset-x-0 top-0 z-40 section-x pt-28">
-          <div className="mb-5 flex items-center gap-4">
-            <span className="h-px w-12 bg-accent" />
-            <span className="text-eyebrow text-paper-dim">What we do</span>
-          </div>
-          <h2 className="max-w-lg font-display text-3xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-4xl">
-            Everything your business needs to stand out online.
-          </h2>
-        </div>
-
-        {/* central light helix */}
-        <div className="absolute left-1/2 top-1/2 z-[5] h-[86%] w-[46%] -translate-x-1/2 -translate-y-1/2">
-          <LightHelixCanvas eventSource={trackRef} />
-        </div>
-
-        {/* orbiting cards */}
-        <div className="absolute left-1/2 top-1/2 z-10 [perspective:1500px]">
-          <div className="relative [transform-style:preserve-3d]">
-            {SERVICES.map((service, i) => (
-              <OrbitCard
-                key={service.index}
-                base={(i / SERVICES.length) * 360}
-                progress={scrollYProgress}
-                icon={ICONS[i]}
-                label={service.index}
-                title={service.title}
-                body={service.summary}
-                features={service.tags}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* scroll hint */}
-        <span className="absolute bottom-8 left-1/2 z-40 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-paper-faint">
-          Scroll to explore our services
-        </span>
+      <div className="absolute inset-x-0 top-0 z-40 section-x pt-28">
+        <Heading />
       </div>
+
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:1300px]">
+        <div className="relative [transform-style:preserve-3d]">
+          {/* helix at the centre of the 3D space (z = 0) so cards sort around it */}
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[68vh] w-[30vw] min-w-[420px] -translate-x-1/2 -translate-y-1/2"
+            style={{ transform: "translate(-50%, -50%) translateZ(0px)" }}
+          >
+            <LightHelixCanvas eventSource={stageRef} />
+          </div>
+
+          {SERVICES.map((service, i) => (
+            <OrbitCard
+              key={service.index}
+              angle={angles[i]}
+              isHovered={hovered === i}
+              anyHovered={hovered !== null}
+              onEnter={() => setHovered(i)}
+              icon={ICONS[i]}
+              label={service.index}
+              title={service.title}
+              body={service.summary}
+              features={service.tags}
+            />
+          ))}
+        </div>
+      </div>
+
+      <span className="absolute bottom-8 left-1/2 z-40 -translate-x-1/2 text-[10px] uppercase tracking-[0.3em] text-paper-faint">
+        Hover a card to explore
+      </span>
     </section>
   );
 }
 
 function OrbitCard({
-  base,
-  progress,
+  angle,
+  isHovered,
+  anyHovered,
+  onEnter,
   icon,
   label,
   title,
   body,
   features,
 }: {
-  base: number;
-  progress: MotionValue<number>;
+  angle: MotionValue<number>;
+  isHovered: boolean;
+  anyHovered: boolean;
+  onEnter: () => void;
   icon: ReactNode;
   label: string;
   title: string;
   body: string;
   features: readonly string[];
 }) {
-  const angleDeg = (p: number) => base - p * TURNS * 360;
-  const [front, setFront] = useState(base === 0);
+  const pull = useSpring(isHovered ? 1 : 0, { stiffness: 150, damping: 22 });
 
-  useMotionValueEvent(progress, "change", (p) => {
-    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
-    setFront(f > 0.9);
+  const transform = useTransform([angle, pull] as MotionValue<number>[], (input) => {
+    const [a, pu] = input as number[];
+    const x = Math.sin(a) * RX;
+    const d = Math.cos(a);
+    const z = d * RZ;
+    const ry = -Math.sin(a) * 10; // subtle facing tilt
+    const rz = Math.sin(a) * 4; // subtle banking
+    const sc = 0.84 + 0.16 * ((d + 1) / 2); // farther = smaller
+
+    const X = x * (1 - pu);
+    const Z = z + (RZ + 150 - z) * pu; // pull toward the viewer
+    const RY = ry * (1 - pu);
+    const RZd = rz * (1 - pu);
+    const S = sc + (1.16 - sc) * pu;
+    return `translate(-50%, -50%) translate3d(${X.toFixed(1)}px, 0px, ${Z.toFixed(1)}px) rotateY(${RY.toFixed(2)}deg) rotateZ(${RZd.toFixed(2)}deg) scale(${S.toFixed(3)})`;
   });
 
-  const transform = useTransform(progress, (p) => {
-    const a = angleDeg(p);
-    const f = Math.cos((a * Math.PI) / 180);
-    const s = 0.78 + 0.22 * Math.max(0, f);
-    return `translate(-50%, -50%) rotateY(${a}deg) translateZ(${RADIUS}px) scale(${s})`;
+  // depth brightness/softness — brighter & solid at the front, softer at the back
+  const frontOpacity = useTransform([angle, pull] as MotionValue<number>[], (input) => {
+    const [a, pu] = input as number[];
+    const d = Math.cos(a);
+    return Math.max(0.4 + 0.6 * ((d + 1) / 2), pu);
   });
-  const opacity = useTransform(progress, (p) => {
-    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
-    return 0.08 + 0.92 * smoothstep(-0.25, 0.85, f);
-  });
-  const zIndex = useTransform(progress, (p) => {
-    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
-    return f > 0.05 ? 12 + Math.round(f * 12) : 1;
-  });
-  const pointerEvents = useTransform(progress, (p) => {
-    const f = Math.cos((angleDeg(p) * Math.PI) / 180);
-    return f > 0.85 ? "auto" : "none";
-  }) as unknown as MotionValue<"auto" | "none">;
+
+  const pointerEvents = useTransform(angle, (a) =>
+    Math.cos(a) > 0.12 ? "auto" : "none"
+  ) as unknown as MotionValue<"auto" | "none">;
 
   return (
     <motion.div
-      className="absolute left-1/2 top-1/2 w-[300px] [transform-style:preserve-3d]"
-      style={{ transform, opacity, zIndex, pointerEvents, backfaceVisibility: "hidden" }}
+      onMouseEnter={onEnter}
+      style={{ transform, opacity: frontOpacity, pointerEvents, backfaceVisibility: "hidden" }}
+      className="absolute left-1/2 top-1/2 w-[280px] [transform-style:preserve-3d]"
     >
-      <ServiceCard icon={icon} label={label} title={title} body={body} features={features} forceOpen={front} />
+      {/* dim the non-focused cards while one is being explored */}
+      <motion.div
+        animate={{ opacity: anyHovered && !isHovered ? 0.42 : 1 }}
+        transition={{ type: "spring", stiffness: 120, damping: 22 }}
+      >
+        <ServiceCard
+          icon={icon}
+          label={label}
+          title={title}
+          body={body}
+          features={features}
+          forceOpen={isHovered}
+        />
+      </motion.div>
     </motion.div>
   );
 }
 
-/* ------------------- mobile / reduced-motion fallback ------------------- */
-function ServicesFallback({ showHelix }: { showHelix: boolean }) {
+/* --------------------- mobile: horizontal carousel --------------------- */
+function ServicesCarousel({ showHelix }: { showHelix: boolean }) {
   const ref = useRef<HTMLElement>(null);
   return (
-    <section id="services" ref={ref} className="relative overflow-hidden border-t border-line py-28 section-x md:py-40">
+    <section id="services" ref={ref} className="relative overflow-hidden border-t border-line py-24">
       {showHelix && (
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] opacity-60"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[52vh] opacity-50"
           style={{
-            WebkitMaskImage: "radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 80%)",
-            maskImage: "radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(70% 60% at 50% 25%, #000 25%, transparent 78%)",
+            maskImage: "radial-gradient(70% 60% at 50% 25%, #000 25%, transparent 78%)",
           }}
         >
           <LightHelixCanvas eventSource={ref} />
         </div>
       )}
-      <div className="relative">
+      <div className="relative section-x">
         <Heading />
-        <div className="mt-14 mx-auto grid max-w-md gap-5">
-          {SERVICES.map((service, i) => (
-            <Reveal key={service.index} delay={(i % 2) * 0.08}>
-              <ServiceCard
-                index={i}
-                icon={ICONS[i]}
-                label={service.index}
-                title={service.title}
-                body={service.summary}
-                features={service.tags}
-              />
-            </Reveal>
-          ))}
-        </div>
+      </div>
+      <div className="relative mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[max(1.25rem,5vw)] pb-6 [scrollbar-width:none]">
+        {SERVICES.map((service, i) => (
+          <div key={service.index} className="w-[82%] shrink-0 snap-center sm:w-[60%]">
+            <ServiceCard
+              icon={ICONS[i]}
+              label={service.index}
+              title={service.title}
+              body={service.summary}
+              features={service.tags}
+              forceOpen
+            />
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -248,7 +289,6 @@ function ServiceCard({
   features,
   forceOpen = false,
 }: {
-  index?: number;
   icon: ReactNode;
   label: string;
   title: string;
@@ -273,7 +313,6 @@ function ServiceCard({
 
   return (
     <div className="relative">
-      {/* Ghost keeps the collapsed height */}
       <div aria-hidden className="invisible p-8">
         <Header icon={icon} label={label} open={false} />
         <h3 className="mt-7 font-display text-xl font-bold">{title}</h3>
@@ -285,14 +324,17 @@ function ServiceCard({
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         data-cursor="hover"
-        animate={{ zIndex: open ? 30 : 1 }}
-        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-8 transition-colors duration-200"
+        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-8 transition-[border-color,box-shadow] duration-300"
         style={{
-          borderColor: open ? "rgba(59,130,246,0.4)" : "var(--color-line)",
+          borderColor: open ? "rgba(59,130,246,0.45)" : "var(--color-line)",
           background: open
-            ? "linear-gradient(160deg, rgba(59,130,246,0.10), rgba(124,58,237,0.06)), #0a0a0c"
+            ? "linear-gradient(160deg, rgba(59,130,246,0.12), rgba(124,58,237,0.06)), #0a0a0c"
             : "#0a0a0c",
-          boxShadow: open ? "0 26px 70px -28px rgba(59,130,246,0.55)" : "0 20px 50px -30px rgba(0,0,0,0.9)",
+          boxShadow: forceOpen
+            ? "0 34px 90px -30px rgba(59,130,246,0.7), 0 0 60px -20px rgba(96,165,250,0.4)"
+            : open
+              ? "0 26px 70px -28px rgba(59,130,246,0.5)"
+              : "0 20px 50px -30px rgba(0,0,0,0.9)",
         }}
       >
         <div
