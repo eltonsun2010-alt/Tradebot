@@ -17,6 +17,7 @@ const vertex = /* glsl */ `
   uniform float uTime;
   uniform float uSize;
   uniform float uPixelRatio;
+  uniform float uScroll;    // camera position along the helix (grows as you scroll)
   uniform vec2  uMouse;      // -1..1, already eased on the CPU
   uniform float uInteractive;
 
@@ -29,21 +30,26 @@ const vertex = /* glsl */ `
 
   varying float vBright;
   varying float vAccent;
+  varying float vEdge;
 
   const float TURNS  = 3.0;
-  const float HEIGHT = 6.2;
+  const float HEIGHT = 7.6;
   const float RADIUS = 1.35;
   const float TUBE   = 0.16;
 
   void main() {
-    float twist = uTime * 0.12;
-    float ang = aT * TAU * TURNS + aStrand * 3.14159265 + twist;
+    // Travel down the helix: scroll shifts every particle's vertical parameter
+    // and fract() wraps it, so the strand appears endless and never resets.
+    float vpos = fract(aT + uScroll);
+    float twist = uTime * 0.09;
+    float ang = vpos * TAU * TURNS + aStrand * 3.14159265 + twist;
 
     vec2 rd = vec2(cos(ang), sin(ang));       // radial direction
     vec3 pos;
     pos.x = rd.x * RADIUS;
     pos.z = rd.y * RADIUS;
-    pos.y = (aT - 0.5) * HEIGHT;
+    pos.y = (vpos - 0.5) * HEIGHT;
+    vEdge = smoothstep(0.0, 0.1, vpos) * (1.0 - smoothstep(0.9, 1.0, vpos));
 
     // ribbon thickness — scatter around the strand centreline
     pos.x += rd.x * aRad * TUBE;
@@ -91,6 +97,7 @@ const fragment = /* glsl */ `
   uniform float uOpacity;
   varying float vBright;
   varying float vAccent;
+  varying float vEdge;
 
   void main() {
     float d = length(gl_PointCoord - 0.5);
@@ -103,7 +110,7 @@ const fragment = /* glsl */ `
     vec3 col = mix(uColorCore, uColorAccent, smoothstep(0.74, 1.0, vAccent) * 0.7);
     col *= 0.7 + 0.6 * vBright;
 
-    gl_FragColor = vec4(col, a * vBright * uOpacity);
+    gl_FragColor = vec4(col, a * vBright * uOpacity * vEdge);
     if (gl_FragColor.a < 0.01) discard;
   }
 `;
@@ -111,13 +118,16 @@ const fragment = /* glsl */ `
 export function LightHelix({
   count = 6000,
   interactive = true,
+  scroll,
 }: {
   count?: number;
   interactive?: boolean;
+  scroll?: { get: () => number };
 }) {
   const { size, viewport } = useThree();
   const mouse = useRef(new THREE.Vector2(0, 0));
   const eased = useRef(new THREE.Vector2(0, 0));
+  const scrollEased = useRef(0);
 
   const { geometry, material } = useMemo(() => {
     const half = Math.floor(count / 2);
@@ -165,6 +175,7 @@ export function LightHelix({
         uPixelRatio: { value: 1 },
         uMouse: { value: new THREE.Vector2(0, 0) },
         uInteractive: { value: interactive ? 1 : 0 },
+        uScroll: { value: 0 },
         uOpacity: { value: 1 },
         uColorCore: { value: new THREE.Color(0.86, 0.91, 1.0) },
         uColorAccent: { value: new THREE.Color(0.32, 0.58, 1.0) },
@@ -177,6 +188,12 @@ export function LightHelix({
     const u = material.uniforms;
     u.uTime.value = state.clock.elapsedTime;
     u.uPixelRatio.value = Math.min(2, viewport.dpr || 1);
+    // ease the scroll-driven camera position so travel feels weightless
+    if (scroll) {
+      const target = scroll.get();
+      scrollEased.current += (target - scrollEased.current) * Math.min(1, delta * 3.2);
+      u.uScroll.value = scrollEased.current;
+    }
     if (interactive) {
       mouse.current.set(state.pointer.x, state.pointer.y);
       // ease toward the cursor so attraction glides back when it stops moving

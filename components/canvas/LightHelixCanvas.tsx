@@ -14,8 +14,10 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
  */
 export default function LightHelixCanvas({
   eventSource,
+  scroll,
 }: {
   eventSource: RefObject<HTMLElement | null>;
+  scroll?: { get: () => number };
 }) {
   const reduced = usePrefersReducedMotion();
   const mobile = useIsMobile();
@@ -47,7 +49,7 @@ export default function LightHelixCanvas({
         eventSource={eventSource as unknown as RefObject<HTMLElement>}
         eventPrefix="client"
       >
-        <LightHelix count={count} interactive={!mobile && !reduced} />
+        <LightHelix count={count} interactive={!mobile && !reduced} scroll={scroll} />
       </Canvas>
     </div>
   );
