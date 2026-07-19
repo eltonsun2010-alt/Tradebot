@@ -189,6 +189,20 @@ body {
   }
 }
 
+/* Energy pulse travelling along the double-helix strands */
+@keyframes helix-flow {
+  to {
+    stroke-dashoffset: -2320;
+  }
+}
+.helix-flow {
+  animation: helix-flow 5.5s linear infinite;
+}
+.helix-flow-2 {
+  animation: helix-flow 5.5s linear infinite;
+  animation-delay: -2.75s;
+}
+
 /* ============================================================
    Accessibility
    ============================================================ */
