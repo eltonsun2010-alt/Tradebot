@@ -1,12 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useReducedMotion, useScroll, type MotionValue } from "framer-motion";
 import { SERVICES } from "@/lib/data";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { ServiceCard, ICONS } from "@/components/ui/ServiceCard";
-import { HELIX, scrollToRot } from "@/components/canvas/LightHelix";
 
 const LightHelixCanvas = dynamic(() => import("@/components/canvas/LightHelixCanvas"), {
   ssr: false,
@@ -16,151 +15,205 @@ export function Services() {
   const reduced = useReducedMotion();
   const mobile = useIsMobile();
   if (mobile || reduced) return <ServicesCarousel showHelix={!reduced} />;
-  return <ServicesJourney />;
+  return <ServicesExhibition />;
 }
 
 /* ==================================================================== *
- * Desktop: the service cards are premium glass panels mounted on the
- * Light Helix. The WebGL layer draws the glowing double-helix; this DOM
- * layer positions each card using the SAME spiral math (same rotation,
- * pitch and camera), so the panels orbit and travel along the glowing
- * strands as one connected system. As you scroll the whole structure
- * turns: each card sweeps to the front to be read, then continues round
- * and away as the next arrives — every card stays on the strand the
- * entire time, only dimming as it swings behind.
+ * Desktop: a cinematic exhibition. The user travels down a thin Light
+ * Helix; each service is a chapter that rises out of darkness, holds
+ * the whole screen with large editorial type, then falls away before
+ * the next one appears. The words are the hero — the helix only guides
+ * the eye, brightening for the active chapter and fading everywhere else.
  * ==================================================================== */
 const N = SERVICES.length;
-const TAU = Math.PI * 2;
-const wrapAngle = (a: number) => a - TAU * Math.round(a / TAU);
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
+const C0 = 0.13; // first chapter centre (leaves room for the intro)
+const C1 = 0.9; // last chapter centre
+const SLOT = (C1 - C0) / N;
 
-function ServicesJourney() {
+const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+function smoothstep(a: number, b: number, x: number) {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+}
+// a chapter's presence: full in the middle of its slot, gone at the edges,
+// with a beat of darkness between chapters so only one is ever on screen
+function presence(p: number, i: number) {
+  const centre = C0 + (i + 0.5) * SLOT;
+  const u = Math.abs(p - centre) / SLOT; // 0 at centre, 0.5 at slot edge
+  return 1 - smoothstep(0.32, 0.46, u);
+}
+
+function ServicesExhibition() {
   const sectionRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const chapters = useRef<(HTMLDivElement | null)[]>([]);
+  const activity = useRef(0);
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
   });
 
-  return (
-    <section
-      id="services"
-      ref={sectionRef}
-      className="relative border-t border-line"
-      style={{ height: `${N * 100 + 60}vh` }}
-    >
-      <div className="sticky top-0 h-screen overflow-hidden">
-        {/* The glowing double-helix — the spiral path */}
-        <LightHelixCanvas eventSource={sectionRef} scroll={scrollYProgress} />
-
-        {/* The glass panels mounted on the helix, orbiting along it. The same
-            loop also fades the intro heading, so they stay perfectly in sync. */}
-        <HelixCards progress={scrollYProgress} introRef={introRef} />
-
-        {/* Intro heading — the mouth of the corridor, before the first card */}
-        <div ref={introRef} className="pointer-events-none absolute inset-x-0 top-0 z-40 section-x pt-28 will-change-[opacity,transform]">
-          <div className="mb-5 flex items-center gap-4">
-            <span className="h-px w-12 bg-accent" />
-            <span className="text-eyebrow text-paper-dim">What we do</span>
-          </div>
-          <h2 className="max-w-lg font-display text-3xl font-extrabold leading-[1.06] tracking-[-0.02em] text-paper md:text-4xl">
-            Everything your business needs to stand out online.
-          </h2>
-          <p className="mt-6 text-sm text-paper-faint">Scroll to travel the helix &darr;</p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** DOM overlay: each card projected onto the same orbiting spiral the WebGL
- *  helix uses, so the panels ride the glowing strands together. */
-function HelixCards({ progress, introRef }: { progress: MotionValue<number>; introRef: RefObject<HTMLDivElement | null> }) {
-  const wraps = useRef<(HTMLDivElement | null)[]>([]);
-  const [focused, setFocused] = useState(-1);
-  const focusedRef = useRef(-1);
-  const rotEased = useRef(scrollToRot(progress.get()));
-
   useEffect(() => {
     let raf = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const s = progress.get();
-      const target = scrollToRot(s);
-      rotEased.current += (target - rotEased.current) * Math.min(1, dt * 3.6);
-      const rot = rotEased.current;
-
-      // fade / lift the intro heading out as the first card arrives
-      if (introRef.current) {
-        introRef.current.style.opacity = (1 - smoothstep(0.04, 0.11, s)).toFixed(3);
-        introRef.current.style.transform = `translateY(${(-42 * smoothstep(0, 0.12, s)).toFixed(1)}px)`;
-      }
-
-      let nextFocus = -1;
-      let bestFront = -1;
+    const tick = () => {
+      const p = scrollYProgress.get();
+      let maxV = 0;
       for (let i = 0; i < N; i += 1) {
-        const theta = i * HELIX.DELTA;
-        const phi = wrapAngle(theta - rot);
-        // world position on the card orbit after the group's rotation + lift
-        const worldX = HELIX.R_CARD * Math.sin(theta - rot);
-        const worldZ = HELIX.R_CARD * Math.cos(theta - rot);
-        const worldY = HELIX.PITCH * (rot - theta);
-        const dz = HELIX.CAM_Z - worldZ; // depth from camera (always > 0)
-        const sx = (worldX * HELIX.FOCAL) / dz;
-        const sy = (-worldY * HELIX.FOCAL) / dz;
-        // gentle depth-scale: front cards grow, back cards recede, but kept in a
-        // range where an expanded front card still fits the viewport
-        const scale = Math.min(1.12, Math.max(0.52, (HELIX.CAM_Z / dz) * 0.82));
-        const front = Math.cos(phi) * 0.5 + 0.5; // 1 front → 0 back
-        const opacity = 0.14 + 0.86 * Math.pow(front, 1.5);
-
-        const el = wraps.current[i];
+        const v = presence(p, i);
+        if (v > maxV) maxV = v;
+        const el = chapters.current[i];
         if (el) {
-          el.style.transform = `translate(-50%, -50%) translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) scale(${scale.toFixed(3)})`;
-          el.style.opacity = opacity.toFixed(3);
-          el.style.zIndex = String(1000 + Math.round(worldZ * 100));
-          el.style.pointerEvents = Math.abs(phi) < 0.5 ? "auto" : "none";
-        }
-        if (front > bestFront && Math.abs(phi) < 0.62) {
-          bestFront = front;
-          nextFocus = i;
+          const centre = C0 + (i + 0.5) * SLOT;
+          const u = (p - centre) / SLOT; // signed position within the slot
+          const ty = -u * 70; // words drift gently upward as the eye passes
+          const scale = 0.968 + 0.032 * v;
+          el.style.opacity = v.toFixed(3);
+          el.style.filter = `blur(${((1 - v) * 4).toFixed(2)}px)`;
+          el.style.transform = `translate3d(0, ${ty.toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
+          el.style.pointerEvents = v > 0.6 ? "auto" : "none";
         }
       }
-      if (nextFocus !== focusedRef.current) {
-        focusedRef.current = nextFocus;
-        setFocused(nextFocus);
+      activity.current = maxV;
+      if (glowRef.current) glowRef.current.style.opacity = (maxV * 0.9).toFixed(3);
+      if (introRef.current) {
+        const io = 1 - smoothstep(0.03, 0.085, p);
+        introRef.current.style.opacity = io.toFixed(3);
+        introRef.current.style.transform = `translateY(${(-40 * smoothstep(0, 0.09, p)).toFixed(1)}px)`;
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [progress, introRef]);
+  }, [scrollYProgress]);
+
+  const glow = useRef({ get: () => activity.current }).current;
 
   return (
-    <div className="absolute inset-0 z-30 overflow-hidden">
-      {SERVICES.map((service, i) => (
+    <section
+      id="services"
+      ref={sectionRef}
+      className="relative border-t border-line bg-ink"
+      style={{ height: `${N * 118 + 60}vh` }}
+    >
+      <div className="sticky top-0 h-screen overflow-hidden">
+        {/* the guiding thread of light */}
+        <LightHelixCanvas eventSource={sectionRef} scroll={scrollYProgress} glow={glow} />
+
+        {/* the pool of light that lifts the active chapter out of the dark */}
         <div
-          key={service.index}
-          ref={(el) => {
-            wraps.current[i] = el;
+          ref={glowRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-0"
+          style={{
+            background:
+              "radial-gradient(46% 42% at 34% 48%, rgba(96,132,224,0.16), transparent 72%)",
           }}
-          className="absolute left-1/2 top-1/2 w-[330px] will-change-transform"
-          style={{ transform: "translate(-50%,-50%)" }}
-        >
-          <ServiceCard
-            icon={ICONS[i]}
-            label={service.index}
-            title={service.title}
-            body={service.summary}
-            features={service.tags}
-            forceOpen={focused === i}
-          />
+        />
+
+        {/* intro — the entrance to the exhibition */}
+        <div ref={introRef} className="pointer-events-none absolute inset-0 flex items-center section-x">
+          <div className="max-w-2xl">
+            <div className="mb-6 flex items-center gap-4">
+              <span className="h-px w-12 bg-accent" />
+              <span className="text-eyebrow text-paper-dim">What we do</span>
+            </div>
+            <h2 className="font-display text-[clamp(2.4rem,6vw,4.5rem)] font-extrabold leading-[1.02] tracking-[-0.03em] text-paper">
+              Everything your business needs to stand out online.
+            </h2>
+            <p className="mt-8 text-eyebrow text-paper-faint">Scroll to travel the exhibition &darr;</p>
+          </div>
         </div>
+
+        {/* the chapters — one dominates at a time */}
+        {SERVICES.map((service, i) => (
+          <Chapter
+            key={service.index}
+            ref={(el) => {
+              chapters.current[i] = el;
+            }}
+            service={service}
+          />
+        ))}
+
+        {/* an ultra-quiet chapter index, bottom-left */}
+        <ChapterIndex progress={scrollYProgress} />
+      </div>
+    </section>
+  );
+}
+
+function Chapter({
+  service,
+  ref,
+}: {
+  service: (typeof SERVICES)[number];
+  ref: RefObject<HTMLDivElement | null> | ((el: HTMLDivElement | null) => void);
+}) {
+  return (
+    <div
+      ref={ref}
+      className="absolute inset-0 flex items-center opacity-0 section-x will-change-[opacity,transform,filter]"
+    >
+      <div className="max-w-3xl">
+        <div className="mb-7 flex items-center gap-4">
+          <span className="font-display text-sm font-semibold tracking-[0.1em] text-accent-bright">
+            {service.index}
+          </span>
+          <span className="h-px w-10 bg-line-strong" />
+          <span className="text-eyebrow text-paper-faint">
+            {service.index} / {String(N).padStart(2, "0")}
+          </span>
+        </div>
+
+        <h3 className="font-display text-[clamp(2.9rem,8vw,6.5rem)] font-extrabold leading-[0.96] tracking-[-0.035em] text-paper">
+          {service.title}
+        </h3>
+
+        <p className="mt-9 max-w-md text-base leading-relaxed text-paper-dim">
+          {service.summary}
+        </p>
+
+        <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3">
+          {service.tags.map((t) => (
+            <span key={t} className="text-[11px] uppercase tracking-[0.24em] text-paper-faint">
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A whisper-quiet current-chapter marker — orientation without clutter. */
+function ChapterIndex({ progress }: { progress: MotionValue<number> }) {
+  const rails = useRef<(HTMLSpanElement | null)[]>([]);
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const p = progress.get();
+      for (let i = 0; i < N; i += 1) {
+        const el = rails.current[i];
+        if (el) el.style.opacity = (0.16 + presence(p, i) * 0.84).toFixed(3);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [progress]);
+
+  return (
+    <div className="pointer-events-none absolute bottom-10 left-[max(1.5rem,5vw)] flex items-center gap-2.5">
+      {SERVICES.map((s, i) => (
+        <span
+          key={s.index}
+          ref={(el) => {
+            rails.current[i] = el;
+          }}
+          className="h-[2px] w-7 rounded-full bg-paper opacity-20"
+        />
       ))}
     </div>
   );
