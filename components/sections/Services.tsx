@@ -1,11 +1,17 @@
 "use client";
 
 import { useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import { SERVICES } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { Reveal } from "@/components/ui/Reveal";
-import { useIsTouch } from "@/hooks/useMediaQuery";
+import { useIsMobile, useIsTouch } from "@/hooks/useMediaQuery";
 
 const ICONS: ReactNode[] = [
   // 01 Custom Website Design — pen / craft
@@ -50,20 +56,77 @@ export function Services() {
         </Reveal>
       </div>
 
-      <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 md:mt-20">
+      {/* Cards ride a vertical 3D helix — each one swings around to face you as
+          it scrolls to the centre of the viewport. */}
+      <div className="relative mt-10 md:mt-16">
         {SERVICES.map((service, i) => (
-          <ServiceCard
-            key={service.index}
-            index={i}
-            icon={ICONS[i]}
-            label={service.index}
-            title={service.title}
-            body={service.summary}
-            features={service.tags}
-          />
+          <HelixItem key={service.index}>
+            <ServiceCard
+              index={i}
+              icon={ICONS[i]}
+              label={service.index}
+              title={service.title}
+              body={service.summary}
+              features={service.tags}
+            />
+          </HelixItem>
         ))}
       </div>
     </section>
+  );
+}
+
+/** One slot on the helix. Its own scroll progress drives a 3D swing so the
+ *  card rotates in from the side, faces the viewer at centre, then swings out. */
+function HelixItem({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const mobile = useIsMobile();
+
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+
+  const RY = mobile ? 40 : 54;
+  const TX = mobile ? 70 : 170;
+  const TZ = mobile ? 150 : 260;
+
+  const rotateY = useSpring(
+    useTransform(scrollYProgress, [0, 0.5, 1], [RY, 0, -RY]),
+    { stiffness: 110, damping: 22 }
+  );
+  const x = useSpring(
+    useTransform(scrollYProgress, [0, 0.5, 1], [TX, 0, -TX]),
+    { stiffness: 110, damping: 22 }
+  );
+  const z = useSpring(
+    useTransform(scrollYProgress, [0, 0.5, 1], [-TZ, 0, -TZ]),
+    { stiffness: 110, damping: 24 }
+  );
+  const opacity = useTransform(scrollYProgress, [0, 0.26, 0.5, 0.74, 1], [0, 0.55, 1, 0.55, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.82, 1, 0.82]);
+
+  if (reduced) {
+    return (
+      <div ref={ref} className="mx-auto max-w-md py-6">
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="flex min-h-[46vh] items-center justify-center [perspective:1200px]"
+    >
+      <motion.div
+        style={{ rotateY, x, z, opacity, scale, transformStyle: "preserve-3d" }}
+        className="w-full max-w-md"
+      >
+        {children}
+      </motion.div>
+    </div>
   );
 }
 
