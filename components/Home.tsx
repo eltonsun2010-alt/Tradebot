@@ -7,6 +7,7 @@ import { Hero } from "@/components/sections/Hero";
 import { Trust } from "@/components/sections/Trust";
 import { Services } from "@/components/sections/Services";
 import { WhySouthpage } from "@/components/sections/WhySouthpage";
+import { LightHelixSection } from "@/components/sections/LightHelixSection";
 import { Transition } from "@/components/sections/Transition";
 import { Automation } from "@/components/sections/Automation";
 import { Process } from "@/components/sections/Process";
@@ -32,6 +33,7 @@ export function Home() {
         <Trust />
         <Services />
         <WhySouthpage />
+        <LightHelixSection />
         <Transition text="Good design attracts attention. Great systems keep your business moving." />
         <Automation />
         <Process />

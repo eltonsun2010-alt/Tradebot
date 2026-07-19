@@ -11,7 +11,6 @@ import {
 import { SERVICES } from "@/lib/data";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { Reveal } from "@/components/ui/Reveal";
-import { DoubleHelix } from "@/components/ui/DoubleHelix";
 import { useIsMobile, useIsTouch } from "@/hooks/useMediaQuery";
 
 const ICONS: ReactNode[] = [
@@ -57,24 +56,21 @@ export function Services() {
         </Reveal>
       </div>
 
-      {/* Cards ride a glowing double helix — each one swings around to face you
-          as it scrolls to the centre of the viewport. */}
+      {/* Cards swing in on a 3D helix — each one rotates to face you as it
+          scrolls to the centre of the viewport. */}
       <div className="relative mt-10 md:mt-16">
-        <DoubleHelix />
-        <div className="relative">
-          {SERVICES.map((service, i) => (
-            <HelixItem key={service.index}>
-              <ServiceCard
-                index={i}
-                icon={ICONS[i]}
-                label={service.index}
-                title={service.title}
-                body={service.summary}
-                features={service.tags}
-              />
-            </HelixItem>
-          ))}
-        </div>
+        {SERVICES.map((service, i) => (
+          <HelixItem key={service.index}>
+            <ServiceCard
+              index={i}
+              icon={ICONS[i]}
+              label={service.index}
+              title={service.title}
+              body={service.summary}
+              features={service.tags}
+            />
+          </HelixItem>
+        ))}
       </div>
     </section>
   );
@@ -108,7 +104,7 @@ function HelixItem({ children }: { children: ReactNode }) {
     useTransform(scrollYProgress, [0, 0.5, 1], [-TZ, 0, -TZ]),
     { stiffness: 110, damping: 24 }
   );
-  const opacity = useTransform(scrollYProgress, [0, 0.24, 0.5, 0.76, 1], [0.15, 0.7, 1, 0.7, 0.15]);
+  const opacity = useTransform(scrollYProgress, [0, 0.26, 0.5, 0.74, 1], [0, 0.6, 1, 0.6, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.82, 1, 0.82]);
 
   if (reduced) {
