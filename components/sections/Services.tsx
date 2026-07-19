@@ -49,14 +49,13 @@ export function Services() {
 const N = SERVICES.length;
 const M0 = 0.15; // first landmark
 const MSTEP = 0.175; // spacing between landmarks (last ≈ 0.85)
-const FOCUS_SHARP = 10; // how quickly focus falls off away from centre
-const VSPAN = 2650; // px a card travels vertically per unit of journey
-// Each card is bolted to a fixed point on the helix curve. Its angle along the
-// path fixes its horizontal offset and depth; only its vertical position changes
-// as the camera travels, so the viewer moves past it rather than it flying in.
+const FOCUS_SHARP = 10; // how quickly focus falls off away from the camera
+// Each card is a stationary object bolted to a fixed point on the helix curve.
+// Its angle along the path fixes its on-screen offset once; nothing about its
+// position animates. The camera (scroll) is what travels — a card is simply
+// discovered (faded in) as the camera reaches its point on the path.
 const ANG_RATE = Math.PI * 2 * 2.4; // helix turns across the whole journey
-const R_CARD = 96; // how far off the axis the card sits (kept small → readable)
-const RZ_CARD = 70; // its depth on the path
+const R_CARD = 96; // fixed off-axis offset (kept small → readable)
 
 function ServicesJourney() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -65,8 +64,8 @@ function ServicesJourney() {
     offset: ["start start", "end end"],
   });
 
-  // drives the helix travel (camera position along the strand)
-  const helixScroll = useTransform(scrollYProgress, (p) => p * 1.5);
+  // drives the helix travel — the camera moving down the strand IS the animation
+  const helixScroll = useTransform(scrollYProgress, (p) => p * 2.6);
   // intro heading fades out once the journey begins
   const introOpacity = useTransform(scrollYProgress, [0, 0.06, 0.12], [1, 1, 0]);
   const introY = useTransform(scrollYProgress, [0, 0.12], [0, -40]);
@@ -155,32 +154,30 @@ function JourneyCard({
     setFocused(focusOf(p) > 0.55);
   });
 
-  // the card's fixed point on the helix curve — constant, independent of scroll
+  // Fixed point on the helix curve — computed ONCE, never animated.
   const A = milestone * ANG_RATE + baseAngle;
   const X = Math.cos(A) * R_CARD;
-  const Z = Math.sin(A) * RZ_CARD;
-  const yawBase = Math.sin(A) * 13; // slight facing inherited from the path
+  const yawBase = Math.sin(A) * 12; // facing inherited from the path (constant)
 
+  // No translation. The card holds its position; only opacity, a whisper of
+  // scale, and a slight tilt (from the camera's position relative to it) change.
   const transform = useTransform(progress, (p) => {
-    const rel = milestone - p; // camera position relative to the card's fixed spot
-    const f = Math.exp(-Math.pow(rel * FOCUS_SHARP, 2)); // 1 at centre
-    const y = rel * VSPAN; // camera travels → the card slides vertically past it
-    const pitch = rel * 14; // subtle parallax tip as the camera passes
-    const s = 0.93 + 0.09 * f; // gentle scale into focus (a reveal, not a fly-in)
-    return `translate(-50%, -50%) translate3d(${X.toFixed(1)}px, ${y.toFixed(1)}px, ${Z.toFixed(1)}px) rotateY(${yawBase.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+    const rel = milestone - p; // where the camera is relative to this fixed card
+    const f = Math.exp(-Math.pow(rel * FOCUS_SHARP, 2));
+    const pitch = rel * 10; // slight rotation adjustment as the camera passes
+    const s = 0.965 + 0.05 * f; // very subtle scale
+    return `translate(-50%, -50%) translateX(${X.toFixed(1)}px) rotateY(${yawBase.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
   });
 
-  const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.2));
-  // softly resolves out of the environment as the camera nears it
-  const filter = useTransform(progress, (p) => `blur(${((1 - focusOf(p)) * 3).toFixed(2)}px)`);
+  const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.25));
   const pointerEvents = useTransform(progress, (p) =>
     focusOf(p) > 0.6 ? "auto" : "none"
   ) as unknown as MotionValue<"auto" | "none">;
 
   return (
     <motion.div
-      style={{ transform, opacity, filter, pointerEvents }}
-      className="absolute left-1/2 top-1/2 w-[320px] will-change-transform"
+      style={{ transform, opacity, pointerEvents }}
+      className="absolute left-1/2 top-1/2 w-[320px]"
     >
       <ServiceCard icon={icon} label={label} title={title} body={body} features={features} forceOpen={focused} />
     </motion.div>
