@@ -2,16 +2,18 @@
 
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { LightHelix, HELIX } from "./LightHelix";
+import { LightHelix } from "./LightHelix";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 export default function LightHelixCanvas({
   eventSource,
   scroll,
+  glow,
 }: {
   eventSource: RefObject<HTMLElement | null>;
   scroll?: { get: () => number };
+  glow?: { get: () => number };
 }) {
   const reduced = usePrefersReducedMotion();
   const mobile = useIsMobile();
@@ -37,12 +39,12 @@ export default function LightHelixCanvas({
         className="!absolute inset-0"
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         dpr={reduced ? 1 : [1, mobile ? 1.5 : 2]}
-        camera={{ position: [0, 0, HELIX.CAM_Z], fov: 42 }}
+        camera={{ position: [0, 0, 6], fov: 45 }}
         frameloop={active ? "always" : "never"}
         eventSource={eventSource as unknown as RefObject<HTMLElement>}
         eventPrefix="client"
       >
-        <LightHelix scroll={scroll} interactive={!mobile && !reduced} />
+        <LightHelix scroll={scroll} glow={glow} interactive={!mobile && !reduced} />
       </Canvas>
     </div>
   );
