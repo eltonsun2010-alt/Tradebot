@@ -49,13 +49,19 @@ export function Services() {
 const N = SERVICES.length;
 const M0 = 0.15; // first landmark
 const MSTEP = 0.175; // spacing between landmarks (last ≈ 0.85)
-const FOCUS_SHARP = 10; // how quickly focus falls off away from the camera
-// Each card is a stationary object bolted to a fixed point on the helix curve.
-// Its angle along the path fixes its on-screen offset once; nothing about its
-// position animates. The camera (scroll) is what travels — a card is simply
-// discovered (faded in) as the camera reaches its point on the path.
-const ANG_RATE = Math.PI * 2 * 2.4; // helix turns across the whole journey
-const R_CARD = 96; // fixed off-axis offset (kept small → readable)
+const FOCUS_SHARP = 8; // how gradually a card resolves as the camera nears it
+
+// A corridor fly-through. Each card is a STATIONARY object at a fixed point deep
+// in the spiral (constant transform — it never animates). The camera is a single
+// container that translates forward in Z as you scroll; because the cards sit at
+// fixed depths, they approach, grow (real perspective) and pass on their own.
+const PERSPECTIVE = 1000;
+const R_SPIRAL = 120; // radius of the card spiral around the corridor axis
+const ANGLE_STEP = 2.3; // radians between consecutive cards along the spiral
+const GAP_Z = 820; // world depth between cards
+const FOCUS_Z = 430; // depth at which a card sits when the camera is aligned (readable)
+const CAM_K = GAP_Z / MSTEP; // camera Z travelled per unit of scroll progress
+const FIRST_Z = M0 * CAM_K + FOCUS_Z; // depth of the first card
 
 function ServicesJourney() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -101,15 +107,19 @@ function ServicesJourney() {
           <p className="mt-6 text-sm text-paper-faint">Scroll to travel the helix &darr;</p>
         </motion.div>
 
-        {/* Landmarks along the helix */}
-        <div className="absolute inset-0 [perspective:1000px]">
-          <div className="relative h-full [transform-style:preserve-3d]">
+        {/* Landmarks along the corridor. The camera CONTAINER travels forward in
+            Z with scroll; the cards inside hold constant positions. */}
+        <div className="absolute inset-0" style={{ perspective: `${PERSPECTIVE}px` }}>
+          <motion.div
+            className="relative h-full [transform-style:preserve-3d]"
+            style={{ transform: useTransform(scrollYProgress, (p) => `translateZ(${(p * CAM_K).toFixed(1)}px)`) }}
+          >
             {SERVICES.map((service, i) => (
               <JourneyCard
                 key={service.index}
+                index={i}
                 milestone={M0 + i * MSTEP}
                 progress={scrollYProgress}
-                baseAngle={(i / N) * Math.PI * 2}
                 icon={ICONS[i]}
                 label={service.index}
                 title={service.title}
@@ -117,7 +127,7 @@ function ServicesJourney() {
                 features={service.tags}
               />
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -125,18 +135,18 @@ function ServicesJourney() {
 }
 
 function JourneyCard({
+  index,
   milestone,
   progress,
-  baseAngle,
   icon,
   label,
   title,
   body,
   features,
 }: {
+  index: number;
   milestone: number;
   progress: MotionValue<number>;
-  baseAngle: number;
   icon: ReactNode;
   label: string;
   title: string;
@@ -151,33 +161,37 @@ function JourneyCard({
   };
 
   useMotionValueEvent(progress, "change", (p) => {
-    setFocused(focusOf(p) > 0.55);
+    setFocused(focusOf(p) > 0.5);
   });
 
-  // Fixed point on the helix curve — computed ONCE, never animated.
-  const A = milestone * ANG_RATE + baseAngle;
-  const X = Math.cos(A) * R_CARD;
-  const yawBase = Math.sin(A) * 12; // facing inherited from the path (constant)
+  // The card's fixed position deep in the corridor — computed ONCE. This
+  // transform NEVER changes; the camera container moving in Z is what makes the
+  // card approach, grow (perspective) and pass. No per-card translation.
+  const A = index * ANGLE_STEP;
+  const X = Math.cos(A) * R_SPIRAL;
+  const Y = Math.sin(A) * R_SPIRAL;
+  const Z = -(FIRST_Z + index * GAP_Z);
+  const yaw = -Math.cos(A) * 10; // a touch of facing inherited from the spiral
+  const worldTransform = `translate(-50%, -50%) translate3d(${X.toFixed(1)}px, ${Y.toFixed(1)}px, ${Z.toFixed(1)}px) rotateY(${yaw.toFixed(2)}deg)`;
 
-  // No translation. The card holds its position; only opacity, a whisper of
-  // scale, and a slight tilt (from the camera's position relative to it) change.
-  const transform = useTransform(progress, (p) => {
-    const rel = milestone - p; // where the camera is relative to this fixed card
-    const f = Math.exp(-Math.pow(rel * FOCUS_SHARP, 2));
-    const pitch = rel * 10; // slight rotation adjustment as the camera passes
-    const s = 0.965 + 0.05 * f; // very subtle scale
-    return `translate(-50%, -50%) translateX(${X.toFixed(1)}px) rotateY(${yawBase.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+  // Opacity is the only per-card animation: barely there deep in the distance,
+  // resolving as the camera arrives, and clearing quickly once the camera has
+  // passed (before perspective would blow the card up). Depth/scale/parallax all
+  // come for free from the camera's forward travel.
+  const opacity = useTransform(progress, (p) => {
+    const rel = milestone - p;
+    if (rel < -0.05) return 0; // camera has passed it — gone
+    const sharp = rel >= 0 ? 6.5 : 15; // fade in slowly from depth, out quickly
+    return Math.min(1, Math.exp(-Math.pow(rel * sharp, 2)) * 1.25);
   });
-
-  const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.25));
   const pointerEvents = useTransform(progress, (p) =>
     focusOf(p) > 0.6 ? "auto" : "none"
   ) as unknown as MotionValue<"auto" | "none">;
 
   return (
     <motion.div
-      style={{ transform, opacity, pointerEvents }}
-      className="absolute left-1/2 top-1/2 w-[320px]"
+      style={{ transform: worldTransform, opacity, pointerEvents }}
+      className="absolute left-1/2 top-1/2 w-[360px]"
     >
       <ServiceCard icon={icon} label={label} title={title} body={body} features={features} forceOpen={focused} />
     </motion.div>
