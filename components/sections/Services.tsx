@@ -71,9 +71,9 @@ const TAU = Math.PI * 2;
 const TURNS = 3; // angular turns per climb/descend cycle (odd = top sits at the back)
 // A TALL, NARROW spiral: vertical travel dominates the radius so it reads as a
 // helix being climbed, not a ring being spun. Radius clears the glowing strands.
-const RX = 240; // spiral radius (screen-x)
-const RZ = 210; // spiral radius (depth)
-const YAMP = 320; // vertical travel of the climb/descend (dominant)
+const RX = 225; // spiral radius (screen-x)
+const RZ = 195; // spiral radius (depth)
+const YAMP = 300; // vertical travel of the climb/descend (dominant)
 
 function ServicesOrbit() {
   const stageRef = useRef<HTMLElement>(null);
@@ -119,18 +119,23 @@ function ServicesOrbit() {
       id="services"
       ref={stageRef}
       onMouseLeave={() => setHovered(null)}
-      className="relative flex min-h-screen items-center overflow-hidden border-t border-line py-28"
+      className="relative min-h-[124vh] overflow-hidden border-t border-line"
     >
+      {/* Heading gets its own band at the top */}
       <div className="absolute inset-x-0 top-0 z-40 section-x pt-28">
         <Heading />
       </div>
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:900px]">
+      {/* Helix + orbit are centred in the space BELOW the heading */}
+      <div className="absolute inset-x-0 bottom-8 top-[336px] grid place-items-center [perspective:900px]">
         <div className="relative [transform-style:preserve-3d]" style={{ transform: "rotateX(6deg)" }}>
-          {/* helix at the centre of the 3D space (z = 0) so cards sort around it */}
           <div
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[76vh] w-[32vw] min-w-[440px] -translate-x-1/2 -translate-y-1/2"
-            style={{ transform: "translate(-50%, -50%) translateZ(0px)" }}
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[64vh] w-[26vw] min-w-[400px] -translate-x-1/2 -translate-y-1/2"
+            style={{
+              transform: "translate(-50%, -50%) translateZ(0px)",
+              WebkitMaskImage: "radial-gradient(62% 64% at 50% 50%, #000 48%, transparent 86%)",
+              maskImage: "radial-gradient(62% 64% at 50% 50%, #000 48%, transparent 86%)",
+            }}
           >
             <LightHelixCanvas eventSource={stageRef} />
           </div>
