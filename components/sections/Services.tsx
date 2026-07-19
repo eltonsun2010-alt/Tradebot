@@ -231,18 +231,19 @@ function Header({ icon, label, open }: { icon: ReactNode; label: string; open: b
   return (
     <div className="flex items-start justify-between">
       <motion.span
-        animate={{ rotate: open ? 10 : 0, scale: open ? 1.06 : 1 }}
-        transition={{ type: "spring", stiffness: 320, damping: 22 }}
-        className="grid h-12 w-12 place-items-center rounded-xl"
-        style={{ background: "rgba(59,130,246,0.12)" }}
+        animate={{ scale: open ? 1.04 : 1 }}
+        transition={{ type: "spring", stiffness: 320, damping: 24 }}
+        className="grid h-12 w-12 place-items-center rounded-xl border transition-colors duration-300"
+        style={{
+          background: open ? "rgba(120,170,255,0.14)" : "rgba(255,255,255,0.06)",
+          borderColor: open ? "rgba(150,190,255,0.3)" : "rgba(255,255,255,0.1)",
+        }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={open ? "#a9c8ff" : "#c3ccda"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           {icon}
         </svg>
       </motion.span>
-      <motion.span animate={{ opacity: open ? 1 : 0.35 }} className="font-display text-3xl font-bold text-paper-faint">
-        {label}
-      </motion.span>
+      <span className="font-display text-2xl font-semibold text-white/25">{label}</span>
     </div>
   );
 }
@@ -290,25 +291,26 @@ function ServiceCard({
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         data-cursor="hover"
-        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-6 transition-[border-color,box-shadow] duration-300"
+        className="absolute inset-x-0 top-0 overflow-hidden rounded-[1.4rem] border p-6 transition-[border-color,box-shadow] duration-500"
         style={{
-          borderColor: open ? "rgba(59,130,246,0.45)" : "var(--color-line)",
-          background: open
-            ? "linear-gradient(160deg, rgba(59,130,246,0.12), rgba(124,58,237,0.06)), #0a0a0c"
-            : "#0a0a0c",
-          boxShadow: forceOpen
-            ? "0 34px 90px -30px rgba(59,130,246,0.7), 0 0 60px -20px rgba(96,165,250,0.4)"
-            : open
-              ? "0 26px 70px -28px rgba(59,130,246,0.5)"
-              : "0 20px 50px -30px rgba(0,0,0,0.9)",
+          background: "linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
+          backdropFilter: "blur(18px) saturate(125%)",
+          WebkitBackdropFilter: "blur(18px) saturate(125%)",
+          borderColor: open ? "rgba(160,195,255,0.32)" : "rgba(255,255,255,0.12)",
+          boxShadow: open
+            ? "0 40px 90px -46px rgba(0,0,0,0.9), 0 0 46px -26px rgba(120,170,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)"
+            : "0 26px 70px -46px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.10)",
         }}
       >
+        {/* soft top reflection */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[1.4rem] bg-gradient-to-b from-white/[0.08] to-transparent" />
+        {/* subtle light following the cursor (soft white, not neon) */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 transition-opacity duration-200"
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
           style={{
             opacity: hover ? 1 : 0,
-            background: "radial-gradient(260px circle at var(--mx) var(--my), rgba(96,165,250,0.16), transparent 60%)",
+            background: "radial-gradient(300px circle at var(--mx) var(--my), rgba(255,255,255,0.10), transparent 62%)",
           }}
         />
 
