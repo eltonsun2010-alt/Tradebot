@@ -2,16 +2,10 @@
 
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { LightHelix } from "./LightHelix";
+import { LightHelix, HELIX } from "./LightHelix";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
-/**
- * WebGL layer for the Light Helix. Rendered client-only. The render loop
- * pauses whenever the section scrolls out of view, DPR is capped, and the
- * particle count drops on mobile. Pointer events are sourced from the whole
- * section so the parallax responds across the panel, not just over the canvas.
- */
 export default function LightHelixCanvas({
   eventSource,
   scroll,
@@ -36,7 +30,6 @@ export default function LightHelixCanvas({
   }, []);
 
   const active = !reduced && visible;
-  const count = mobile ? 2600 : 6000;
 
   return (
     <div ref={ref} className="absolute inset-0">
@@ -44,12 +37,12 @@ export default function LightHelixCanvas({
         className="!absolute inset-0"
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         dpr={reduced ? 1 : [1, mobile ? 1.5 : 2]}
-        camera={{ position: [0, 0, 5], fov: 45 }}
+        camera={{ position: [0, 0, HELIX.CAM_Z], fov: 42 }}
         frameloop={active ? "always" : "never"}
         eventSource={eventSource as unknown as RefObject<HTMLElement>}
         eventPrefix="client"
       >
-        <LightHelix count={count} interactive={!mobile && !reduced} scroll={scroll} />
+        <LightHelix scroll={scroll} interactive={!mobile && !reduced} />
       </Canvas>
     </div>
   );
