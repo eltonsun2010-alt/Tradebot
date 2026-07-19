@@ -42,6 +42,32 @@ export function MeshBackground({
           transition={{ duration: b.dur, repeat: Infinity, ease: "easeInOut" }}
         />
       ))}
+
+      {/* Fractal-noise distortion layer — a fixed turbulence texture that
+          slowly drifts and breathes over the aurora so the surface never
+          reads as a flat gradient. Transform-only, so it stays cheap. */}
+      <motion.div
+        className="absolute -inset-1/4"
+        style={{
+          backgroundImage: `url("${NOISE_URI}")`,
+          backgroundSize: "220px 220px",
+          mixBlendMode: "overlay",
+          opacity: 0.5,
+        }}
+        animate={{ x: [0, 24, -16, 0], y: [0, -20, 14, 0], scale: [1, 1.06, 0.98, 1] }}
+        transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+      />
     </div>
   );
 }
+
+/* Inline SVG fractal noise (feTurbulence) as a data URI — no network, no
+   per-frame filter cost, just a tiled texture we transform. */
+const NOISE_URI =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'>` +
+      `<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/>` +
+      `<feColorMatrix type='saturate' values='0'/></filter>` +
+      `<rect width='100%' height='100%' filter='url(#n)' opacity='0.55'/></svg>`
+  );
