@@ -61,14 +61,16 @@ export function Services() {
 
 /* ------------------------- desktop: living orbit ------------------------- */
 const N = SERVICES.length;
-/* The cards ride a real 3D helix spline: they spiral around the axis (RX/RZ)
-   while climbing and descending (YAMP). TAU * TURNS with an integer TURNS keeps
-   the loop seamless — every trig term is periodic in the phase, so nothing
-   snaps when a card comes back around. */
+/* The cards ride the two invisible spiral rails of the helix. Over one loop a
+   card makes TURNS angular turns while climbing from the bottom to the top and
+   back — coupled so it genuinely spirals up, passes over the top at the BACK,
+   descends behind, and re-emerges. Integer TURNS keeps every trig term periodic
+   in the phase, so the loop is seamless. Cards sit well outside the helix and
+   are kept small so the glowing strands stay the hero. */
 const TAU = Math.PI * 2;
-const TURNS = 2; // rotations per vertical up-and-down cycle (integer = seamless)
-const RX = 190; // spiral radius (screen-x)
-const RZ = 165; // spiral radius (depth)
+const TURNS = 3; // angular turns per climb/descend cycle (odd = top sits at the back)
+const RX = 300; // spiral radius (screen-x) — pushed out from the helix
+const RZ = 255; // spiral radius (depth)
 const YAMP = 235; // vertical travel of the climb/descend
 
 function ServicesOrbit() {
@@ -93,7 +95,8 @@ function ServicesOrbit() {
   }, []);
 
   const bases = useMemo(() => SERVICES.map((_, i) => i / N), []);
-  const speeds = useMemo(() => [0.05, 0.044, 0.056, 0.047, 0.052], []);
+  // ~one full climb/descend loop every ~50s — extremely slow and premium
+  const speeds = useMemo(() => [0.020, 0.0184, 0.0212, 0.0194, 0.0206], []);
   const phase = useRef(bases.slice());
   const sMV = useMemo(() => SERVICES.map((_, i) => motionValue(bases[i])), [bases]);
   const timeMV = useMemo(() => motionValue(0), []);
@@ -120,11 +123,11 @@ function ServicesOrbit() {
         <Heading />
       </div>
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:1400px]">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:1050px]">
         <div className="relative [transform-style:preserve-3d]">
           {/* helix at the centre of the 3D space (z = 0) so cards sort around it */}
           <div
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[72vh] w-[30vw] min-w-[420px] -translate-x-1/2 -translate-y-1/2"
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[76vh] w-[32vw] min-w-[440px] -translate-x-1/2 -translate-y-1/2"
             style={{ transform: "translate(-50%, -50%) translateZ(0px)" }}
           >
             <LightHelixCanvas eventSource={stageRef} />
@@ -185,49 +188,56 @@ function OrbitCard({
 
   const transform = useTransform([s, pull, time] as MotionValue<number>[], (input) => {
     const [sv, pu, t] = input as number[];
-    const th = sv * TAU * TURNS; // angle around the axis
-    const vy = Math.sin(sv * TAU); // -1..1 climb/descend, one cycle per loop
+    const th = sv * TAU * TURNS; // angle around the axis (climbs while it turns)
+    // vertical: bottom → top → bottom over one loop; paired with an odd TURNS
+    // the card is at the BACK when it reaches the top, so it passes over and
+    // descends behind the helix before re-emerging.
+    const climb = -Math.cos(sv * TAU); // -1 bottom, +1 top
 
     const x = Math.cos(th) * RX;
     const z = Math.sin(th) * RZ;
     const depth = Math.sin(th); // +1 toward viewer, -1 behind the helix
 
-    // subtle float / breathing while travelling (paused when pulled out)
-    const floatY = Math.sin(t * 0.8 + seed * 1.7) * 6;
-    const y = vy * YAMP + floatY * (1 - pu);
+    // tiny drifting float so the cards never feel mechanically locked on
+    const floatX = Math.cos(t * 0.33 + seed * 2.1) * 5;
+    const floatY = Math.sin(t * 0.41 + seed * 1.7) * 7;
 
-    // orientation: tangent yaw (capped for readability) + slight inward lean + climb bank
-    const yaw = -Math.sin(th) * 22 - Math.cos(th) * 8;
-    const pitch = Math.cos(sv * TAU) * 12; // bank up while climbing, down while descending
-    const roll = Math.sin(th) * 4;
-    const sc = 0.8 + 0.2 * ((depth + 1) / 2);
+    const x0 = x + floatX;
+    const y0 = climb * YAMP + floatY;
 
-    const X = x * (1 - pu);
-    const Y = y * (1 - pu);
-    const Z = z + (RZ + 170 - z) * pu; // pull toward the camera
+    // orientation: gentle tangent yaw + inward lean + climb bank (all capped so
+    // the card never turns far enough to become unreadable)
+    const yaw = -Math.sin(th) * 15 - Math.cos(th) * 7;
+    const pitch = Math.sin(sv * TAU) * 9;
+    const roll = Math.sin(th) * 3;
+    const sc = 0.9 + 0.12 * ((depth + 1) / 2); // perspective does most of the depth
+
+    const X = x0 * (1 - pu);
+    const Y = y0 * (1 - pu);
+    const Z = z + (300 - z) * pu; // glide toward the camera on hover
     const YAW = yaw * (1 - pu);
     const PIT = pitch * (1 - pu);
     const ROL = roll * (1 - pu);
-    const S = sc + (1.16 - sc) * pu;
+    const S = sc + (1.32 - sc) * pu;
     return `translate(-50%, -50%) translate3d(${X.toFixed(1)}px, ${(-Y).toFixed(1)}px, ${Z.toFixed(1)}px) rotateY(${YAW.toFixed(2)}deg) rotateX(${PIT.toFixed(2)}deg) rotateZ(${ROL.toFixed(2)}deg) scale(${S.toFixed(3)})`;
   });
 
-  // brighter & solid at the front, softer behind the helix
+  // brighter & solid at the front, softer & darker behind the helix
   const frontOpacity = useTransform([s, pull] as MotionValue<number>[], (input) => {
     const [sv, pu] = input as number[];
     const depth = Math.sin(sv * TAU * TURNS);
-    return Math.max(0.34 + 0.66 * ((depth + 1) / 2), pu);
+    return Math.max(0.28 + 0.72 * ((depth + 1) / 2), pu);
   });
 
   const pointerEvents = useTransform(s, (sv) =>
-    Math.sin(sv * TAU * TURNS) > 0.05 ? "auto" : "none"
+    Math.sin(sv * TAU * TURNS) > 0.1 ? "auto" : "none"
   ) as unknown as MotionValue<"auto" | "none">;
 
   return (
     <motion.div
       onMouseEnter={onEnter}
       style={{ transform, opacity: frontOpacity, pointerEvents, backfaceVisibility: "hidden" }}
-      className="absolute left-1/2 top-1/2 w-[280px] [transform-style:preserve-3d]"
+      className="absolute left-1/2 top-1/2 w-[210px] [transform-style:preserve-3d]"
     >
       <motion.div
         animate={{ opacity: anyHovered && !isHovered ? 0.4 : 1 }}
@@ -336,9 +346,9 @@ function ServiceCard({
 
   return (
     <div className="relative">
-      <div aria-hidden className="invisible p-8">
+      <div aria-hidden className="invisible p-6">
         <Header icon={icon} label={label} open={false} />
-        <h3 className="mt-7 font-display text-xl font-bold">{title}</h3>
+        <h3 className="mt-6 font-display text-lg font-bold">{title}</h3>
       </div>
 
       <motion.article
@@ -347,7 +357,7 @@ function ServiceCard({
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         data-cursor="hover"
-        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-8 transition-[border-color,box-shadow] duration-300"
+        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-6 transition-[border-color,box-shadow] duration-300"
         style={{
           borderColor: open ? "rgba(59,130,246,0.45)" : "var(--color-line)",
           background: open
@@ -382,7 +392,7 @@ function ServiceCard({
 
         <div className="relative">
           <Header icon={icon} label={label} open={open} />
-          <h3 className="mt-7 font-display text-xl font-bold text-paper">{title}</h3>
+          <h3 className="mt-6 font-display text-lg font-bold text-paper">{title}</h3>
 
           <motion.div
             initial={false}
