@@ -51,9 +51,9 @@ const M0 = 0.15; // first landmark
 const MSTEP = 0.175; // spacing between landmarks (last ≈ 0.85)
 const FOCUS_SHARP = 11; // how quickly focus falls off away from centre
 const VSPAN = 2650; // px a card travels vertically per unit of journey
-const RX = 235; // horizontal swing of the spiral
-const Z_NEAR = 130; // toward the camera at focus
-const Z_FAR = 300; // pushed away when travelling
+const RX = 220; // horizontal swing of the spiral
+const Z_NEAR = 150; // toward the camera at focus
+const Z_FAR = 440; // pushed far away when travelling — a real depth reveal
 
 function ServicesJourney() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -161,22 +161,24 @@ function JourneyCard({
     const y = rel * VSPAN; // rises up through the viewport
     const z = f * Z_NEAR - (1 - f) * Z_FAR; // comes near at focus, far otherwise
 
-    const yaw = Math.sin(th) * 20 * (1 - f); // straightens to face camera at focus
-    const pitch = -rel * 10 * (1 - f);
-    const s = 0.5 + 0.68 * f;
+    const yaw = Math.sin(th) * 16 * (1 - f); // straightens to face camera at focus
+    const pitch = -rel * 9 * (1 - f);
+    const s = 0.44 + 0.72 * f; // small in the distance, full at focus
 
     return `translate(-50%, -50%) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${yaw.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
   });
 
-  const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.15));
+  const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.2));
+  // frosted & indistinct in the distance, resolving to crystal-clear at focus
+  const filter = useTransform(progress, (p) => `blur(${((1 - focusOf(p)) * 5).toFixed(2)}px)`);
   const pointerEvents = useTransform(progress, (p) =>
     focusOf(p) > 0.6 ? "auto" : "none"
   ) as unknown as MotionValue<"auto" | "none">;
 
   return (
     <motion.div
-      style={{ transform, opacity, pointerEvents }}
-      className="absolute left-1/2 top-1/2 w-[300px]"
+      style={{ transform, opacity, filter, pointerEvents }}
+      className="absolute left-1/2 top-1/2 w-[320px] will-change-transform"
     >
       <ServiceCard icon={icon} label={label} title={title} body={body} features={features} forceOpen={focused} />
     </motion.div>
@@ -280,9 +282,9 @@ function ServiceCard({
 
   return (
     <div className="relative">
-      <div aria-hidden className="invisible p-6">
+      <div aria-hidden className="invisible p-7">
         <Header icon={icon} label={label} open={false} />
-        <h3 className="mt-6 font-display text-lg font-bold">{title}</h3>
+        <h3 className="mt-7 font-display text-[1.35rem] font-medium">{title}</h3>
       </div>
 
       <motion.article
@@ -291,32 +293,39 @@ function ServiceCard({
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         data-cursor="hover"
-        className="absolute inset-x-0 top-0 overflow-hidden rounded-[1.4rem] border p-6 transition-[border-color,box-shadow] duration-500"
+        className="absolute inset-x-0 top-0 overflow-hidden rounded-[2rem] p-7 transition-shadow duration-500"
         style={{
-          background: "linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))",
-          backdropFilter: "blur(18px) saturate(125%)",
-          WebkitBackdropFilter: "blur(18px) saturate(125%)",
-          borderColor: open ? "rgba(160,195,255,0.32)" : "rgba(255,255,255,0.12)",
+          // real frosted-glass slab: translucent body + heavy blur, and the
+          // "edges" are made of light (inset highlights), not a drawn border.
+          background: "linear-gradient(157deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035) 60%, rgba(255,255,255,0.06))",
+          backdropFilter: "blur(28px) saturate(150%) brightness(1.04)",
+          WebkitBackdropFilter: "blur(28px) saturate(150%) brightness(1.04)",
           boxShadow: open
-            ? "0 40px 90px -46px rgba(0,0,0,0.9), 0 0 46px -26px rgba(120,170,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18)"
-            : "0 26px 70px -46px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.10)",
+            ? "0 70px 130px -60px rgba(0,0,0,0.92), inset 0 1.5px 1px rgba(255,255,255,0.4), inset 0 0 0 1px rgba(255,255,255,0.09), inset 0 -30px 60px -40px rgba(180,205,255,0.14)"
+            : "0 44px 100px -60px rgba(0,0,0,0.85), inset 0 1.5px 1px rgba(255,255,255,0.28), inset 0 0 0 1px rgba(255,255,255,0.06)",
         }}
       >
-        {/* soft top reflection */}
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[1.4rem] bg-gradient-to-b from-white/[0.08] to-transparent" />
-        {/* subtle light following the cursor (soft white, not neon) */}
+        {/* broad soft top reflection (light pooling on the glass) */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-1/4 h-2/3 bg-gradient-to-b from-white/[0.10] to-transparent" />
+        {/* faint diagonal specular streak, like light raking across glass */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "linear-gradient(118deg, transparent 34%, rgba(255,255,255,0.06) 47%, transparent 58%)" }}
+        />
+        {/* soft light following the cursor */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 transition-opacity duration-300"
           style={{
             opacity: hover ? 1 : 0,
-            background: "radial-gradient(300px circle at var(--mx) var(--my), rgba(255,255,255,0.10), transparent 62%)",
+            background: "radial-gradient(320px circle at var(--mx) var(--my), rgba(255,255,255,0.10), transparent 60%)",
           }}
         />
 
         <div className="relative">
           <Header icon={icon} label={label} open={open} />
-          <h3 className="mt-6 font-display text-lg font-bold text-paper">{title}</h3>
+          <h3 className="mt-7 font-display text-[1.35rem] font-medium tracking-[-0.01em] text-white">{title}</h3>
 
           <motion.div
             initial={false}
@@ -324,19 +333,17 @@ function ServiceCard({
             transition={spring}
             className="overflow-hidden"
           >
-            <p className="pt-4 text-sm leading-relaxed text-paper-dim">{body}</p>
+            <p className="pt-4 text-[0.82rem] leading-relaxed text-white/55">{body}</p>
             <ul className="mt-5 space-y-2.5">
               {features.map((f) => (
-                <li key={f} className="flex items-center gap-3 text-sm text-paper">
-                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] text-accent-bright">
-                    ✓
-                  </span>
+                <li key={f} className="flex items-center gap-3 text-[0.82rem] text-white/80">
+                  <span className="h-1 w-1 rounded-full bg-white/50" />
                   {f}
                 </li>
               ))}
             </ul>
-            <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-accent-bright">
-              Learn more →
+            <span className="mt-6 inline-flex items-center gap-2 text-[0.8rem] font-medium text-white/70">
+              Learn more <span aria-hidden className="text-white/40">&rarr;</span>
             </span>
           </motion.div>
         </div>
