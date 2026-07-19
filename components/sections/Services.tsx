@@ -49,11 +49,14 @@ export function Services() {
 const N = SERVICES.length;
 const M0 = 0.15; // first landmark
 const MSTEP = 0.175; // spacing between landmarks (last ≈ 0.85)
-const FOCUS_SHARP = 11; // how quickly focus falls off away from centre
+const FOCUS_SHARP = 10; // how quickly focus falls off away from centre
 const VSPAN = 2650; // px a card travels vertically per unit of journey
-const RX = 220; // horizontal swing of the spiral
-const Z_NEAR = 150; // toward the camera at focus
-const Z_FAR = 440; // pushed far away when travelling — a real depth reveal
+// Each card is bolted to a fixed point on the helix curve. Its angle along the
+// path fixes its horizontal offset and depth; only its vertical position changes
+// as the camera travels, so the viewer moves past it rather than it flying in.
+const ANG_RATE = Math.PI * 2 * 2.4; // helix turns across the whole journey
+const R_CARD = 96; // how far off the axis the card sits (kept small → readable)
+const RZ_CARD = 70; // its depth on the path
 
 function ServicesJourney() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -152,25 +155,24 @@ function JourneyCard({
     setFocused(focusOf(p) > 0.55);
   });
 
+  // the card's fixed point on the helix curve — constant, independent of scroll
+  const A = milestone * ANG_RATE + baseAngle;
+  const X = Math.cos(A) * R_CARD;
+  const Z = Math.sin(A) * RZ_CARD;
+  const yawBase = Math.sin(A) * 13; // slight facing inherited from the path
+
   const transform = useTransform(progress, (p) => {
-    const rel = milestone - p; // >0 → still ahead/below, <0 → passed/above
+    const rel = milestone - p; // camera position relative to the card's fixed spot
     const f = Math.exp(-Math.pow(rel * FOCUS_SHARP, 2)); // 1 at centre
-
-    const th = baseAngle + p * Math.PI * 2 * 1.5; // swings with the helix twist
-    const x = Math.sin(th) * RX * (1 - f * 0.92); // slides to centre at focus
-    const y = rel * VSPAN; // rises up through the viewport
-    const z = f * Z_NEAR - (1 - f) * Z_FAR; // comes near at focus, far otherwise
-
-    const yaw = Math.sin(th) * 16 * (1 - f); // straightens to face camera at focus
-    const pitch = -rel * 9 * (1 - f);
-    const s = 0.44 + 0.72 * f; // small in the distance, full at focus
-
-    return `translate(-50%, -50%) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${yaw.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+    const y = rel * VSPAN; // camera travels → the card slides vertically past it
+    const pitch = rel * 14; // subtle parallax tip as the camera passes
+    const s = 0.93 + 0.09 * f; // gentle scale into focus (a reveal, not a fly-in)
+    return `translate(-50%, -50%) translate3d(${X.toFixed(1)}px, ${y.toFixed(1)}px, ${Z.toFixed(1)}px) rotateY(${yawBase.toFixed(2)}deg) rotateX(${pitch.toFixed(2)}deg) scale(${s.toFixed(3)})`;
   });
 
   const opacity = useTransform(progress, (p) => Math.min(1, focusOf(p) * 1.2));
-  // frosted & indistinct in the distance, resolving to crystal-clear at focus
-  const filter = useTransform(progress, (p) => `blur(${((1 - focusOf(p)) * 5).toFixed(2)}px)`);
+  // softly resolves out of the environment as the camera nears it
+  const filter = useTransform(progress, (p) => `blur(${((1 - focusOf(p)) * 3).toFixed(2)}px)`);
   const pointerEvents = useTransform(progress, (p) =>
     focusOf(p) > 0.6 ? "auto" : "none"
   ) as unknown as MotionValue<"auto" | "none">;
