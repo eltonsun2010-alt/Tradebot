@@ -52,14 +52,14 @@ export function Services() {
 
       <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 md:mt-20">
         {SERVICES.map((service, i) => (
-          <RevealCard
+          <ServiceCard
             key={service.index}
             index={i}
             icon={ICONS[i]}
             label={service.index}
             title={service.title}
             body={service.summary}
-            tags={service.tags}
+            features={service.tags}
           />
         ))}
       </div>
@@ -67,20 +67,45 @@ export function Services() {
   );
 }
 
-function RevealCard({
+/** Collapsed header (icon + title) — rendered both as the interactive card's
+ *  top and, invisibly, as a "ghost" so the grid cell keeps a fixed height. */
+function Header({ icon, label, open }: { icon: ReactNode; label: string; open: boolean }) {
+  return (
+    <div className="flex items-start justify-between">
+      <motion.span
+        animate={{ rotate: open ? 10 : 0, scale: open ? 1.06 : 1 }}
+        transition={{ type: "spring", stiffness: 320, damping: 22 }}
+        className="grid h-12 w-12 place-items-center rounded-xl"
+        style={{ background: "rgba(59,130,246,0.12)" }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          {icon}
+        </svg>
+      </motion.span>
+      <motion.span
+        animate={{ opacity: open ? 1 : 0.35 }}
+        className="font-display text-3xl font-bold text-paper-faint"
+      >
+        {label}
+      </motion.span>
+    </div>
+  );
+}
+
+function ServiceCard({
   index,
   icon,
   label,
   title,
   body,
-  tags,
+  features,
 }: {
   index: number;
   icon: ReactNode;
   label: string;
   title: string;
   body: string;
-  tags: readonly string[];
+  features: readonly string[];
 }) {
   const touch = useIsTouch();
   const ref = useRef<HTMLDivElement>(null);
@@ -95,80 +120,90 @@ function RevealCard({
     el.style.setProperty("--my", `${e.clientY - r.top}px`);
   };
 
-  const spring = { type: "spring" as const, stiffness: 320, damping: 26 };
+  const spring = { type: "spring" as const, stiffness: 260, damping: 30 };
 
   return (
-    <motion.article
-      ref={ref}
-      initial={{ opacity: 0, y: 26 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.6, delay: (index % 3) * 0.07, ease: [0.16, 1, 0.3, 1] }}
-      onMouseMove={touch ? undefined : onMove}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      data-cursor="hover"
-      className="group relative flex flex-col overflow-hidden rounded-2xl border p-8 transition-colors duration-200"
-      style={{
-        borderColor: hover ? "rgba(59,130,246,0.4)" : "var(--color-line)",
-        background: hover
-          ? "linear-gradient(160deg, rgba(59,130,246,0.08), rgba(124,58,237,0.05)), #0a0a0c"
-          : "#0a0a0c",
-        boxShadow: hover ? "0 20px 60px -30px rgba(59,130,246,0.5)" : "none",
-      }}
-    >
-      {/* Cursor-following radial light */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 transition-opacity duration-200"
-        style={{
-          opacity: hover ? 1 : 0,
-          background:
-            "radial-gradient(240px circle at var(--mx) var(--my), rgba(96,165,250,0.14), transparent 60%)",
-        }}
-      />
-
-      <div className="relative flex flex-1 flex-col">
-        <div className="flex items-center justify-between">
-          <motion.span
-            animate={{ rotate: open ? 10 : 0, scale: open ? 1.05 : 1 }}
-            transition={spring}
-            className="grid h-12 w-12 place-items-center rounded-xl"
-            style={{ background: "rgba(59,130,246,0.12)" }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              {icon}
-            </svg>
-          </motion.span>
-          <span className="font-display text-3xl font-bold text-paper-faint">{label}</span>
-        </div>
-
-        <h3 className="mt-7 font-display text-xl font-bold text-paper">{title}</h3>
-
-        {/* Description + tags reveal on hover (always shown on touch) */}
-        <motion.div
-          animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0, y: open ? 0 : 8 }}
-          transition={spring}
-          className="overflow-hidden"
-        >
-          <p className="pt-3 text-sm leading-relaxed text-paper-dim">{body}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span key={tag} className="rounded-full border border-line-strong px-3 py-1 text-xs text-paper-dim">
-                {tag}
-              </span>
-            ))}
-          </div>
-          <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-accent-bright">
-            <motion.span animate={{ x: open ? 0 : -8, opacity: open ? 1 : 0 }} transition={spring}>
-              Learn more
-            </motion.span>
-            <motion.span animate={{ x: open ? 0 : -10, opacity: open ? 1 : 0 }} transition={{ ...spring, delay: open ? 0.04 : 0 }}>
-              →
-            </motion.span>
-          </span>
-        </motion.div>
+    // The wrapper holds the grid cell's height; the card inside is absolute so
+    // expanding it never nudges neighbouring cards or the row below.
+    <div className="relative">
+      {/* Ghost: same collapsed header, invisible — defines the cell height */}
+      <div aria-hidden className="invisible p-8">
+        <Header icon={icon} label={label} open={false} />
+        <h3 className="mt-7 font-display text-xl font-bold">{title}</h3>
       </div>
-    </motion.article>
+
+      <motion.article
+        ref={ref}
+        onMouseMove={touch ? undefined : onMove}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        data-cursor="hover"
+        animate={{ zIndex: open ? 30 : 1 }}
+        className="absolute inset-x-0 top-0 overflow-hidden rounded-2xl border p-8 transition-colors duration-200"
+        style={{
+          borderColor: hover ? "rgba(59,130,246,0.4)" : "var(--color-line)",
+          background: hover
+            ? "linear-gradient(160deg, rgba(59,130,246,0.08), rgba(124,58,237,0.05)), #0a0a0c"
+            : "#0a0a0c",
+          boxShadow: hover ? "0 26px 70px -28px rgba(59,130,246,0.55)" : "none",
+        }}
+      >
+        {/* Cursor-tracked spotlight: soft light + a texture it reveals */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 transition-opacity duration-200"
+          style={{
+            opacity: hover ? 1 : 0,
+            background: "radial-gradient(260px circle at var(--mx) var(--my), rgba(96,165,250,0.16), transparent 60%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 transition-opacity duration-300"
+          style={{
+            opacity: hover ? 0.5 : 0,
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.55) 1px, transparent 1.4px)",
+            backgroundSize: "9px 9px",
+            WebkitMaskImage: "radial-gradient(180px circle at var(--mx) var(--my), #000 0%, transparent 55%)",
+            maskImage: "radial-gradient(180px circle at var(--mx) var(--my), #000 0%, transparent 55%)",
+          }}
+        />
+
+        <div className="relative">
+          <Header icon={icon} label={label} open={open} />
+          <h3 className="mt-7 font-display text-xl font-bold text-paper">{title}</h3>
+
+          {/* Revealed on hover: description, feature list, CTA */}
+          <motion.div
+            initial={false}
+            animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+            transition={spring}
+            className="overflow-hidden"
+          >
+            <p className="pt-4 text-sm leading-relaxed text-paper-dim">{body}</p>
+
+            <ul className="mt-5 space-y-2.5">
+              {features.map((f) => (
+                <li key={f} className="flex items-center gap-3 text-sm text-paper">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] text-accent-bright">
+                    ✓
+                  </span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-accent-bright">
+              <motion.span animate={{ x: open ? 0 : -8, opacity: open ? 1 : 0 }} transition={spring}>
+                Learn more
+              </motion.span>
+              <motion.span animate={{ x: open ? 0 : -10, opacity: open ? 1 : 0 }} transition={{ ...spring, delay: open ? 0.05 : 0 }}>
+                →
+              </motion.span>
+            </span>
+          </motion.div>
+        </div>
+      </motion.article>
+    </div>
   );
 }
