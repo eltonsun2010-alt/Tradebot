@@ -69,9 +69,11 @@ const N = SERVICES.length;
    are kept small so the glowing strands stay the hero. */
 const TAU = Math.PI * 2;
 const TURNS = 3; // angular turns per climb/descend cycle (odd = top sits at the back)
-const RX = 300; // spiral radius (screen-x) — pushed out from the helix
-const RZ = 255; // spiral radius (depth)
-const YAMP = 235; // vertical travel of the climb/descend
+// A TALL, NARROW spiral: vertical travel dominates the radius so it reads as a
+// helix being climbed, not a ring being spun. Radius clears the glowing strands.
+const RX = 240; // spiral radius (screen-x)
+const RZ = 210; // spiral radius (depth)
+const YAMP = 320; // vertical travel of the climb/descend (dominant)
 
 function ServicesOrbit() {
   const stageRef = useRef<HTMLElement>(null);
@@ -123,8 +125,8 @@ function ServicesOrbit() {
         <Heading />
       </div>
 
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:1050px]">
-        <div className="relative [transform-style:preserve-3d]">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [perspective:900px]">
+        <div className="relative [transform-style:preserve-3d]" style={{ transform: "rotateX(6deg)" }}>
           {/* helix at the centre of the 3D space (z = 0) so cards sort around it */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 h-[76vh] w-[32vw] min-w-[440px] -translate-x-1/2 -translate-y-1/2"
@@ -210,7 +212,7 @@ function OrbitCard({
     const yaw = -Math.sin(th) * 15 - Math.cos(th) * 7;
     const pitch = Math.sin(sv * TAU) * 9;
     const roll = Math.sin(th) * 3;
-    const sc = 0.9 + 0.12 * ((depth + 1) / 2); // perspective does most of the depth
+    const sc = 0.8 + 0.2 * ((depth + 1) / 2); // near = larger, far = smaller
 
     const X = x0 * (1 - pu);
     const Y = y0 * (1 - pu);
@@ -226,7 +228,7 @@ function OrbitCard({
   const frontOpacity = useTransform([s, pull] as MotionValue<number>[], (input) => {
     const [sv, pu] = input as number[];
     const depth = Math.sin(sv * TAU * TURNS);
-    return Math.max(0.28 + 0.72 * ((depth + 1) / 2), pu);
+    return Math.max(0.22 + 0.78 * ((depth + 1) / 2), pu);
   });
 
   const pointerEvents = useTransform(s, (sv) =>
@@ -237,7 +239,7 @@ function OrbitCard({
     <motion.div
       onMouseEnter={onEnter}
       style={{ transform, opacity: frontOpacity, pointerEvents, backfaceVisibility: "hidden" }}
-      className="absolute left-1/2 top-1/2 w-[210px] [transform-style:preserve-3d]"
+      className="absolute left-1/2 top-1/2 w-[176px] [transform-style:preserve-3d]"
     >
       <motion.div
         animate={{ opacity: anyHovered && !isHovered ? 0.4 : 1 }}
