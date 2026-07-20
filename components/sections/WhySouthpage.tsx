@@ -5,19 +5,19 @@ import { useEffect, useRef } from "react";
 import { useReducedMotion, useScroll } from "framer-motion";
 import { WHY_CARDS } from "@/lib/data";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { stationReveal } from "@/components/canvas/LightCorridorCanvas";
 
 const LightCorridorCanvas = dynamic(() => import("@/components/canvas/LightCorridorCanvas"), {
   ssr: false,
 });
 
 /* ==================================================================== *
- * The Light Corridor. The visitor floats through a monumental hall of
- * glass pillars rising from a dark reflective floor. The architecture
- * itself presents each principle: the pillars part, the space fills with
- * that principle's colour of light, and an editorial panel settles into
- * the opening. Only one commands the space at a time; the rest recede
- * into an infinite black volume.
+ * The Light Corridor. The visitor walks through one contemporary
+ * building where each principle is a curated exhibit built permanently
+ * into the architecture — a recessed stone display, an illuminated glass
+ * panel, a monumental etched wall. The camera faces the way it travels;
+ * the layout of each room draws the eye to its feature wall, the view
+ * turns to appreciate the piece, then turns back and continues. The
+ * content lives in the building, never as an overlay on top of it.
  * ==================================================================== */
 
 export function WhySouthpage() {
@@ -38,8 +38,6 @@ const smoothstep = (a: number, b: number, x: number) => {
 function LightCorridor() {
   const sectionRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const panels = useRef<(HTMLDivElement | null)[]>([]);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -49,24 +47,10 @@ function LightCorridor() {
     let raf = 0;
     const tick = () => {
       const p = scrollYProgress.get();
-      let activity = 0;
-      for (let i = 0; i < N; i += 1) {
-        // the panel settles into the opening as the camera rounds the corner
-        // and the pillars part — one installation at a time
-        const reveal = stationReveal(p, i);
-        activity = Math.max(activity, reveal);
-        const el = panels.current[i];
-        if (el) {
-          el.style.opacity = reveal.toFixed(3);
-          el.style.filter = `blur(${((1 - reveal) * 5).toFixed(2)}px)`;
-          const rise = (1 - reveal) * 26;
-          el.style.transform = `translateY(${rise.toFixed(1)}px) scale(${(0.94 + 0.06 * reveal).toFixed(3)})`;
-          el.style.pointerEvents = reveal > 0.7 ? "auto" : "none";
-        }
-      }
-      if (glowRef.current) glowRef.current.style.opacity = (0.16 + activity * 0.5).toFixed(3);
+      // the entrance title dissolves as the visitor steps inside; from there
+      // every principle is read off the building itself, never off an overlay
       if (introRef.current) {
-        introRef.current.style.opacity = (1 - smoothstep(0.015, 0.06, p)).toFixed(3);
+        introRef.current.style.opacity = (1 - smoothstep(0.012, 0.05, p)).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -82,48 +66,18 @@ function LightCorridor() {
       style={{ height: `${N * 128 + 120}vh` }}
     >
       <div className="sticky top-0 h-screen overflow-hidden bg-ink">
-        {/* the architecture */}
+        {/* the architecture — and, built into it, the exhibits themselves */}
         <LightCorridorCanvas eventSource={sectionRef} scroll={scrollYProgress} count={N} />
 
-        {/* cinematic key light on the active installation + a deep vignette */}
-        <div
-          ref={glowRef}
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(38% 44% at 50% 44%, rgba(150,180,255,0.12), transparent 72%)",
-          }}
-        />
+        {/* a deep vignette to seat the room in shadow at the frame edges */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(125% 100% at 50% 40%, transparent 38%, rgba(0,0,0,0.9))" }}
+          style={{ background: "radial-gradient(130% 100% at 50% 42%, transparent 46%, rgba(0,0,0,0.82))" }}
         />
 
-        {/* editorial exhibits, settled into the opening between the pillars */}
-        {WHY_CARDS.map((card, i) => (
-          <div
-            key={card.title}
-            ref={(el) => {
-              panels.current[i] = el;
-            }}
-            className="absolute inset-0 flex items-center justify-center opacity-0 will-change-[opacity,transform,filter]"
-          >
-            <div className="w-[min(32rem,84vw)] text-center">
-              <span className="font-display text-xs font-semibold tracking-[0.34em] text-accent-bright">
-                {idx(i)}
-              </span>
-              <h3 className="mx-auto mt-6 max-w-[16ch] font-display text-[clamp(2.2rem,4.4vw,3.6rem)] font-extrabold leading-[1.0] tracking-[-0.035em] text-white">
-                {card.title}
-              </h3>
-              <p className="mx-auto mt-7 max-w-sm text-[0.95rem] leading-relaxed text-white/60">{card.body}</p>
-            </div>
-          </div>
-        ))}
-
-        {/* the entrance */}
-        <div ref={introRef} className="pointer-events-none absolute inset-x-0 top-[26vh] flex flex-col items-center text-center section-x">
+        {/* the entrance — the only overlay, and it clears as you step inside */}
+        <div ref={introRef} className="pointer-events-none absolute inset-x-0 top-[24vh] flex flex-col items-center text-center section-x">
           <div className="mb-6 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Why choose Southpage</span>
@@ -131,8 +85,18 @@ function LightCorridor() {
           <h2 className="max-w-2xl font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-extrabold leading-[1.04] tracking-[-0.025em] text-paper">
             Built with intention.
           </h2>
-          <p className="mt-7 text-eyebrow text-paper-faint">Enter the corridor &darr;</p>
+          <p className="mt-7 text-eyebrow text-paper-faint">Walk through &darr;</p>
         </div>
+
+        {/* the same principles, exposed to assistive tech (the 3D lettering is
+            decorative to a screen reader) */}
+        <ul className="sr-only">
+          {WHY_CARDS.map((card, i) => (
+            <li key={card.title}>
+              {idx(i)}. {card.title}. {card.body}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
