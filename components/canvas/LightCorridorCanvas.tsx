@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, MeshReflectorMaterial, Text } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, type RefObject, type ReactNode } from "react";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three-stdlib";
 import { WHY_CARDS } from "@/lib/data";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -82,21 +83,105 @@ function PpV(f: Frame, lx: number, ly: number, lz: number): THREE.Vector3 {
   return new THREE.Vector3(p[0], p[1], p[2]);
 }
 
+/* ------------------- procedural PBR surface detail -------------------- *
+ * Small canvas-baked maps give every material subtle roughness variation
+ * and micro relief, so no surface reads as a flat colour. Honed-stone
+ * mottle, brushed-metal streaks and oak grain — no external assets, so it
+ * resolves offline. Guarded for non-DOM environments (SSR / workers).      */
+const HAS_DOM = typeof document !== "undefined";
+type Draw = (ctx: CanvasRenderingContext2D, s: number) => void;
+function tex(draw: Draw, rx = 3, ry = 3): THREE.Texture | null {
+  if (!HAS_DOM) return null;
+  const s = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  draw(ctx, s);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx, ry);
+  t.anisotropy = 4;
+  return t;
+}
+// fractal mottle — stacked upscaled random grids (honed stone / concrete)
+function mottle(gray: number, spread: number, layers = [8, 26, 80]): Draw {
+  return (ctx, s) => {
+    ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+    ctx.fillRect(0, 0, s, s);
+    ctx.imageSmoothingEnabled = true;
+    layers.forEach((n, k) => {
+      const g = document.createElement("canvas");
+      g.width = g.height = n;
+      const gg = g.getContext("2d")!;
+      const id = gg.createImageData(n, n);
+      for (let i = 0; i < n * n; i += 1) {
+        const v = Math.max(0, Math.min(255, gray + (Math.random() * 2 - 1) * spread));
+        id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = v;
+        id.data[i * 4 + 3] = 255;
+      }
+      gg.putImageData(id, 0, 0);
+      ctx.globalAlpha = 0.6 / (k + 1);
+      ctx.drawImage(g, 0, 0, s, s);
+    });
+    ctx.globalAlpha = 1;
+  };
+}
+// fine directional streak — brushed metal, or (stretched) timber grain
+function streak(gray: number, spread: number): Draw {
+  return (ctx, s) => {
+    for (let x = 0; x < s; x += 1) {
+      const v = Math.max(0, Math.min(255, gray + (Math.random() * 2 - 1) * spread)) | 0;
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, 0, 1, s);
+    }
+  };
+}
+
 /* --------------------------- premium materials --------------------------- */
-const travertine = new THREE.MeshStandardMaterial({ color: 0xd7cdba, roughness: 0.92, metalness: 0.02 });
-const concrete = new THREE.MeshStandardMaterial({ color: 0xc6c8cc, roughness: 0.92, metalness: 0.02 });
-const blackStone = new THREE.MeshStandardMaterial({ color: 0x0d0f13, roughness: 0.15, metalness: 0.5, envMapIntensity: 1.3 });
-const aluminium = new THREE.MeshStandardMaterial({ color: 0xc3c8ce, roughness: 0.28, metalness: 1.0, envMapIntensity: 1.4 });
-const bronze = new THREE.MeshStandardMaterial({ color: 0x8c6a3e, roughness: 0.36, metalness: 1.0, envMapIntensity: 1.2 });
-const steel = new THREE.MeshStandardMaterial({ color: 0x3a3e44, roughness: 0.5, metalness: 0.9, envMapIntensity: 1.0 });
-const oak = new THREE.MeshStandardMaterial({ color: 0x9c754a, roughness: 0.64, metalness: 0.02 });
+// honed travertine — warm, matte, mottled with micro relief
+const travertine = new THREE.MeshStandardMaterial({
+  color: 0xd8cfbe, roughness: 0.86, metalness: 0.02, envMapIntensity: 0.7,
+  roughnessMap: tex(mottle(180, 55), 2, 2), bumpMap: tex(mottle(150, 70), 2, 2) ?? undefined, bumpScale: 0.006,
+});
+// white architectural concrete — fine, even, faint blotching
+const concrete = new THREE.MeshStandardMaterial({
+  color: 0xcccdd0, roughness: 0.9, metalness: 0.02, envMapIntensity: 0.6,
+  roughnessMap: tex(mottle(180, 40), 2.5, 2.5), bumpMap: tex(mottle(150, 45), 2.5, 2.5) ?? undefined, bumpScale: 0.004,
+});
+// black polished stone — low roughness with subtle polish variation
+const blackStone = new THREE.MeshStandardMaterial({
+  color: 0x0d0f13, roughness: 0.16, metalness: 0.5, envMapIntensity: 1.45,
+  roughnessMap: tex(mottle(70, 34), 3, 3),
+});
+// brushed aluminium — anisotropic streak
+const aluminium = new THREE.MeshStandardMaterial({
+  color: 0xc3c8ce, roughness: 0.32, metalness: 1.0, envMapIntensity: 1.5,
+  roughnessMap: tex(streak(190, 26), 1, 6),
+});
+// satin bronze accents
+const bronze = new THREE.MeshStandardMaterial({
+  color: 0x8c6a3e, roughness: 0.42, metalness: 1.0, envMapIntensity: 1.3,
+  roughnessMap: tex(streak(150, 30), 1, 5),
+});
+// matte steel
+const steel = new THREE.MeshStandardMaterial({
+  color: 0x3a3e44, roughness: 0.55, metalness: 0.9, envMapIntensity: 1.0,
+  roughnessMap: tex(mottle(140, 24), 2, 2),
+});
+// natural oak — directional grain
+const oak = new THREE.MeshStandardMaterial({
+  color: 0x9a7748, roughness: 0.62, metalness: 0.02, envMapIntensity: 0.5,
+  roughnessMap: tex(streak(150, 40), 1, 8), bumpMap: tex(streak(150, 60), 1, 8) ?? undefined, bumpScale: 0.01,
+});
 const reveal = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.9, metalness: 0 });
-const glass = new THREE.MeshPhysicalMaterial({ color: 0x2b3a49, metalness: 0, roughness: 0.05, transparent: true, opacity: 0.22, envMapIntensity: 1.7, side: THREE.DoubleSide });
+// ultra-clear structural glass
+const glass = new THREE.MeshPhysicalMaterial({ color: 0x2b3a49, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.2, envMapIntensity: 1.8, side: THREE.DoubleSide });
 const skyMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.66, 0.75, 0.94), toneMapped: false });
 // a recessed display surface: dark stone that is softly backlit, not a neon
 // object — the faint self-illumination reads like light washing over the niche
-const displayLit = new THREE.MeshStandardMaterial({ color: 0x0e1013, roughness: 0.42, metalness: 0.4, emissive: 0x1c222b, emissiveIntensity: 0.55, envMapIntensity: 1.1 });
-const glassLit = new THREE.MeshPhysicalMaterial({ color: 0x1a2a38, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.5, emissive: 0x22303e, emissiveIntensity: 0.5, envMapIntensity: 1.6, side: THREE.DoubleSide });
+const displayLit = new THREE.MeshStandardMaterial({ color: 0x0e1013, roughness: 0.36, metalness: 0.45, emissive: 0x1a1f27, emissiveIntensity: 0.5, envMapIntensity: 1.2, roughnessMap: tex(mottle(80, 26), 2, 2) });
+const glassLit = new THREE.MeshPhysicalMaterial({ color: 0x1a2a38, roughness: 0.07, metalness: 0, transparent: true, opacity: 0.48, emissive: 0x202d3a, emissiveIntensity: 0.45, envMapIntensity: 1.6, side: THREE.DoubleSide });
 
 const shaftMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: {},
@@ -141,8 +226,24 @@ function featureWorld(i: number): THREE.Vector3 {
 }
 
 /* --------------------------- building blocks --------------------------- */
+// baked-to-size rounded boxes: a small world-space chamfer on every exposed
+// edge (never a razor edge), and where two chamfered elements meet the bevels
+// leave a fine reveal — the shadow gaps a real building has. Memoised so each
+// distinct size builds its geometry once.
+const _geoCache = new Map<string, THREE.BufferGeometry>();
+function roundedGeo(w: number, h: number, d: number): THREE.BufferGeometry {
+  const q = (n: number) => Math.round(Math.abs(n) * 100) / 100;
+  const key = `${q(w)},${q(h)},${q(d)}`;
+  let g = _geoCache.get(key);
+  if (!g) {
+    const r = Math.min(0.035, Math.min(q(w), q(h), q(d)) * 0.42);
+    g = new RoundedBoxGeometry(q(w), q(h), q(d), 2, r);
+    _geoCache.set(key, g);
+  }
+  return g;
+}
 function B({ mat, p, s, ry = 0, tl = 0 }: { mat: THREE.Material; p: [number, number, number]; s: [number, number, number]; ry?: number; tl?: number }) {
-  return <mesh geometry={BOX} material={mat} position={p} rotation={[tl, ry, 0]} scale={s} castShadow receiveShadow />;
+  return <mesh geometry={roundedGeo(s[0], s[1], s[2])} material={mat} position={p} rotation={[tl, ry, 0]} castShadow receiveShadow />;
 }
 function Reveal({ f, lx, lz, len, along = true }: { f: Frame; lx: number; lz: number; len: number; along?: boolean }) {
   const s: [number, number, number] = along ? [0.18, 0.14, len] : [len, 0.14, 0.18];
@@ -403,18 +504,43 @@ function Building() {
 /* ------------------------------ systems ------------------------------ */
 type Shared = { glow: { current: number }; tint: { current: THREE.Color }; active: { current: THREE.Vector3 } };
 
+// a soft key that washes the active exhibit — reveals the piece, doesn't glow
 function AccentLight({ shared }: { shared: Shared }) {
   const light = useRef<THREE.PointLight>(null);
   const v = useRef(new THREE.Vector3());
   useFrame(() => {
     const l = light.current;
     if (!l) return;
-    v.current.set(shared.active.current.x, shared.active.current.y + 1.6, shared.active.current.z);
+    v.current.set(shared.active.current.x, shared.active.current.y + 1.4, shared.active.current.z);
     l.position.lerp(v.current, 0.07);
     l.color.lerp(shared.tint.current, 0.05);
-    l.intensity += (16 + shared.glow.current * 34 - l.intensity) * 0.07;
+    l.intensity += (9 + shared.glow.current * 20 - l.intensity) * 0.07;
   });
-  return <pointLight ref={light} distance={30} decay={1.5} />;
+  return <pointLight ref={light} distance={26} decay={1.7} />;
+}
+
+// a soft daylight key that follows the visitor and casts the contact shadows
+// that ground the architecture; frustum kept tight to the active room so the
+// shadows stay crisp where the eye is
+function ShadowSun({ shared }: { shared: Shared }) {
+  const light = useRef<THREE.DirectionalLight>(null);
+  const { scene } = useThree();
+  useEffect(() => {
+    if (light.current) scene.add(light.current.target);
+  }, [scene]);
+  useFrame(() => {
+    const l = light.current;
+    if (!l) return;
+    const a = shared.active.current;
+    l.position.set(a.x + 7, 24, a.z + 11);
+    l.target.position.set(a.x, FLOOR_Y, a.z);
+    l.target.updateMatrixWorld();
+  });
+  return (
+    <directionalLight ref={light} intensity={0.9} color={0xf1efe8} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0002} shadow-normalBias={0.7}>
+      <orthographicCamera attach="shadow-camera" args={[-22, 22, 24, -24, 1, 84]} />
+    </directionalLight>
+  );
 }
 
 function StationDrivers({ scroll, shared }: { scroll?: { get: () => number }; shared: Shared }) {
@@ -494,7 +620,7 @@ function Rig({ scroll }: { scroll?: { get: () => number } }) {
 
 function ReflectiveFloor() {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, FLOOR_Y - 0.12, -55]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, FLOOR_Y - 0.12, -55]} receiveShadow>
       <planeGeometry args={[120, 240]} />
       <MeshReflectorMaterial
         resolution={512}
@@ -555,6 +681,7 @@ export default function LightCorridorCanvas({
     <div ref={ref} className="absolute inset-0">
       <Canvas
         className="!absolute inset-0"
+        shadows="soft"
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
         dpr={reduced ? 1 : [1, mobile ? 1.3 : 1.7]}
         camera={{ position: [0, 0.25, 2], fov: 58 }}
@@ -566,8 +693,10 @@ export default function LightCorridorCanvas({
         }}
       >
         <Sky />
-        <ambientLight intensity={0.14} />
-        <directionalLight position={[16, 26, 10]} intensity={0.55} color={0xf3f6fb} />
+        {/* soft indirect fill (cool sky / warm bounce) + a following daylight key */}
+        <ambientLight intensity={0.05} />
+        <hemisphereLight args={[0xdfe7f2, 0x2a2620, 0.4]} />
+        <ShadowSun shared={shared} />
         <AccentLight shared={shared} />
         <ReflectiveFloor />
         <Building />
