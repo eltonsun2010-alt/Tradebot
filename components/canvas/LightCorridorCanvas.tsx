@@ -3,33 +3,76 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
+import { WHY_CARDS } from "@/lib/data";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /* ------------------------------------------------------------------ *
- * The Light Corridor — an architectural installation the visitor floats
- * through. Monumental glass pillars rise from a dark reflective floor in
- * an infinite black volume. As the camera glides forward, the pillars at
- * each station part to present a service, the surrounding architecture
- * takes on that service's colour of light, and a river of light energy
- * drifts through the whole space. The architecture itself is the story.
+ * The Light Corridor — a curving architectural route.
+ *
+ * The visitor floats along the centre-line of a corridor that bends,
+ * widens and narrows through an infinite black volume. Monumental glass
+ * pillars follow the path; between installations the way is intimate and
+ * turns away so you cannot see what is ahead, then it opens into a wider
+ * space as the camera rounds the corner and an exhibit is revealed. The
+ * architecture itself carries the journey.
  * ------------------------------------------------------------------ */
 
-export const COR = {
-  GAP: 8.5, // world units between installations — generous negative space
-  LEAD: 9, // empty corridor before the first
-  START: 6, // camera start z
-  TRAVEL: 56, // total camera travel
-  VIEW_AHEAD: 8.5, // how far ahead a station sits when it is centred
-  FLOOR_Y: -4.2,
-  PILLAR_H: 15,
-};
-export const stationZ = (i: number) => -(COR.LEAD + i * COR.GAP);
-export const cameraZ = (p: number) => COR.START - p * COR.TRAVEL;
-/** signed approach of station i for camera progress p (0 = centred). */
-export const stationRel = (p: number, i: number) => cameraZ(p) - (stationZ(i) + COR.VIEW_AHEAD);
+const N = WHY_CARDS.length;
+const STEP = 6;
+const M = 18;
+const LEAD_S = 15; // arc distance before the first installation
+const GAP_S = 15; // arc distance between installations
+const TAIL_S = 11;
+const AHEAD = 8; // how far along the path the camera looks
+const FLOOR_Y = -4.2;
+const PILLAR_H = 15;
+const NARROW = 3.1;
+const WIDE = 7.8;
 
-// each installation gives the architecture its own restrained colour of light
+// the meandering centre-line — gentle, deliberate, never sharp
+const CURVE = (() => {
+  const pts: THREE.Vector3[] = [];
+  for (let k = 0; k <= M; k += 1) {
+    const x = 7.6 * Math.sin(k * 0.52) + 3.4 * Math.sin(k * 1.23 + 1.1);
+    const y = 0.7 * Math.sin(k * 0.8 + 0.5);
+    const z = 2 - k * STEP;
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5);
+})();
+const CURVE_L = CURVE.getLength();
+
+export const stationS = (i: number) => LEAD_S + i * GAP_S;
+export const cameraMaxS = stationS(N - 1) + TAIL_S;
+export const cameraS = (p: number) => p * cameraMaxS;
+const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+/** how present installation i is for camera progress p (0..1). */
+export const stationReveal = (p: number, i: number) => {
+  const d = stationS(i) - cameraS(p); // >0 ahead, 0 at the gate
+  return smoothstep(13, 6, d) * smoothstep(0.4, 3.4, d);
+};
+
+const UP = new THREE.Vector3(0, 1, 0);
+const _pos = new THREE.Vector3();
+const _tan = new THREE.Vector3();
+function frameAt(s: number, outPos: THREE.Vector3, outRight: THREE.Vector3) {
+  const u = clamp(s / CURVE_L, 0, 1);
+  CURVE.getPointAt(u, outPos);
+  CURVE.getTangentAt(u, _tan).normalize();
+  outRight.crossVectors(UP, _tan).normalize();
+  return _tan;
+}
+const widthAt = (s: number) => {
+  let m = 1e9;
+  for (let i = 0; i < N; i += 1) m = Math.min(m, Math.abs(s - stationS(i)));
+  return NARROW + (WIDE - NARROW) * smoothstep(7, 2, m);
+};
+
 const HUES: [number, number, number][] = [
   [0.66, 0.76, 0.98],
   [0.9, 0.94, 1.0],
@@ -40,12 +83,6 @@ const HUES: [number, number, number][] = [
 ];
 const hueOf = (i: number) => HUES[((i % HUES.length) + HUES.length) % HUES.length];
 
-const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = clamp01((x - a) / (b - a));
-  return t * t * (3 - 2 * t);
-};
-
 /* ---------------------------- glass pillar ---------------------------- */
 const pillarVert = /* glsl */ `
   varying vec3 vN;
@@ -55,9 +92,9 @@ const pillarVert = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vN = normalize(normalMatrix * normal);
     vV = normalize(-mv.xyz);
-    float top = 1.0 - smoothstep(2.0, 7.4, position.y);   // dissolve upward
-    float depth = 1.0 - smoothstep(34.0, 58.0, -mv.z);    // recede into black
-    float near = smoothstep(-2.0, 3.0, -mv.z);            // clear the lens
+    float top = 1.0 - smoothstep(2.0, 7.4, position.y);
+    float depth = 1.0 - smoothstep(30.0, 52.0, -mv.z);
+    float near = smoothstep(-2.0, 3.0, -mv.z);
     vFade = top * depth * near;
     gl_Position = projectionMatrix * mv;
   }
@@ -78,7 +115,6 @@ const pillarFrag = /* glsl */ `
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
   }
 `;
-
 function makePillarMaterial(edge: THREE.Color, opacity: number) {
   return new THREE.ShaderMaterial({
     vertexShader: pillarVert,
@@ -95,11 +131,8 @@ function makePillarMaterial(edge: THREE.Color, opacity: number) {
     },
   });
 }
+const pillarGeo = new THREE.BoxGeometry(0.55, PILLAR_H, 0.55);
 
-const pillarGeo = new THREE.BoxGeometry(0.55, COR.PILLAR_H, 0.55);
-const slabGeo = new THREE.BoxGeometry(0.9, COR.PILLAR_H + 3, 0.9);
-
-// a soft radial halo of light for the active installation (not a flat slab)
 const haloVert = /* glsl */ `
   varying vec2 vUv;
   void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
@@ -116,34 +149,57 @@ const haloFrag = /* glsl */ `
   }
 `;
 
+type Shared = {
+  glow: { current: number };
+  tint: { current: THREE.Color };
+  pool: { current: THREE.Vector2 };
+};
+
 function Rig({ scroll }: { scroll?: { get: () => number } }) {
   const { camera } = useThree();
   const eased = useRef(0);
+  const bank = useRef(0);
   const mouse = useRef(new THREE.Vector2());
+  const p0 = useRef(new THREE.Vector3());
+  const p1 = useRef(new THREE.Vector3());
+  const r0 = useRef(new THREE.Vector3());
   useFrame((state, delta) => {
     const target = scroll ? scroll.get() : 0;
-    eased.current += (target - eased.current) * Math.min(1, delta * 2.2); // slow inertia
-    const p = eased.current;
+    eased.current += (target - eased.current) * Math.min(1, delta * 2.0); // slow inertia
+    const s = cameraS(eased.current);
     const t = state.clock.elapsedTime;
-    mouse.current.x += (state.pointer.x - mouse.current.x) * Math.min(1, delta * 1.6);
-    mouse.current.y += (state.pointer.y - mouse.current.y) * Math.min(1, delta * 1.6);
-    camera.position.z = cameraZ(p);
-    camera.position.x = mouse.current.x * 0.5 + Math.sin(t * 0.09) * 0.25;
-    camera.position.y = 0.3 + mouse.current.y * 0.25 + Math.sin(t * 0.07) * 0.12;
-    camera.lookAt(Math.sin(t * 0.05) * 0.3, 0.6, camera.position.z - 12);
+    mouse.current.x += (state.pointer.x - mouse.current.x) * Math.min(1, delta * 1.5);
+    mouse.current.y += (state.pointer.y - mouse.current.y) * Math.min(1, delta * 1.5);
+
+    const tan = frameAt(s, p0.current, r0.current);
+    frameAt(s + AHEAD, p1.current, r0.current);
+    camera.position.set(
+      p0.current.x + mouse.current.x * 0.4,
+      p0.current.y + 0.4 + mouse.current.y * 0.2 + Math.sin(t * 0.07) * 0.1,
+      p0.current.z
+    );
+    camera.lookAt(p1.current.x, p1.current.y + 0.6, p1.current.z);
+
+    // subtle banking that follows the direction of travel
+    frameAt(s + 3.5, p1.current, r0.current);
+    const turn = tan.x * r0.current.z - tan.z * r0.current.x;
+    const bankTarget = clamp(turn * 4.0, -0.05, 0.05);
+    bank.current += (bankTarget - bank.current) * Math.min(1, delta * 1.5);
+    camera.rotateZ(bank.current);
   });
   return null;
 }
 
-/* ---------------------- monumental colonnade ---------------------- */
 function Colonnade() {
   const items = useMemo(() => {
-    const arr: { x: number; z: number; s: number }[] = [];
-    const zEnd = stationZ(HUES.length) - 6;
-    for (let z = COR.START - 4; z > zEnd; z -= 4.7) {
-      const jitter = ((z * 13.13) % 1) * 0.8;
-      arr.push({ x: 8.6 + jitter, z, s: 1 });
-      arr.push({ x: -8.6 - jitter, z, s: 1 });
+    const arr: { p: [number, number, number] }[] = [];
+    const pos = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    for (let s = 3; s < cameraMaxS + 10; s += 2.6) {
+      frameAt(s, pos, right);
+      const w = widthAt(s);
+      arr.push({ p: [pos.x + right.x * w, FLOOR_Y + PILLAR_H / 2, pos.z + right.z * w] });
+      arr.push({ p: [pos.x - right.x * w, FLOOR_Y + PILLAR_H / 2, pos.z - right.z * w] });
     }
     return arr;
   }, []);
@@ -151,77 +207,71 @@ function Colonnade() {
   return (
     <group>
       {items.map((it, k) => (
-        <mesh key={k} geometry={slabGeo} material={mat} position={[it.x, COR.FLOOR_Y + (COR.PILLAR_H + 3) / 2, it.z]} />
+        <mesh key={k} geometry={pillarGeo} material={mat} position={it.p} />
       ))}
     </group>
   );
 }
 
-/* ---------------------- reactive station gates ---------------------- */
-function Stations({
-  count,
-  scroll,
-  glowRef,
-  tintRef,
-}: {
-  count: number;
-  scroll?: { get: () => number };
-  glowRef: { current: number };
-  tintRef: { current: THREE.Color };
-}) {
-  const groups = useRef<(THREE.Group | null)[]>([]);
-  const glows = useRef<(THREE.Mesh | null)[]>([]);
-  const leftMat = useRef<THREE.ShaderMaterial[]>([]);
-  const rightMat = useRef<THREE.ShaderMaterial[]>([]);
+function Stations({ scroll, shared }: { scroll?: { get: () => number }; shared: Shared }) {
+  const lefts = useRef<(THREE.Mesh | null)[]>([]);
+  const rights = useRef<(THREE.Mesh | null)[]>([]);
+  const halos = useRef<(THREE.Mesh | null)[]>([]);
+  const { camera } = useThree();
 
   const stations = useMemo(() => {
-    return Array.from({ length: count }, (_, i) => {
+    const pos = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    return Array.from({ length: N }, (_, i) => {
+      frameAt(stationS(i), pos, right);
       const edge = new THREE.Color(...hueOf(i));
-      const lm = makePillarMaterial(edge, 0.5);
-      const rm = makePillarMaterial(edge, 0.5);
-      leftMat.current[i] = lm;
-      rightMat.current[i] = rm;
-      const glowMat = new THREE.ShaderMaterial({
-        vertexShader: haloVert,
-        fragmentShader: haloFrag,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        uniforms: { uColor: { value: edge.clone() }, uOpacity: { value: 0 } },
-      });
-      return { i, z: stationZ(i), lm, rm, glowMat };
+      return {
+        i,
+        pos: pos.clone(),
+        right: right.clone(),
+        lm: makePillarMaterial(edge, 0.5),
+        rm: makePillarMaterial(edge, 0.5),
+        halo: new THREE.ShaderMaterial({
+          vertexShader: haloVert,
+          fragmentShader: haloFrag,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          uniforms: { uColor: { value: edge.clone() }, uOpacity: { value: 0 } },
+        }),
+      };
     });
-  }, [count]);
+  }, []);
 
-  const glowGeo = useMemo(() => new THREE.PlaneGeometry(15, 12), []);
+  const haloGeo = useMemo(() => new THREE.PlaneGeometry(15, 12), []);
+  const py = FLOOR_Y + PILLAR_H / 2;
 
   useFrame(() => {
     const p = scroll ? scroll.get() : 0;
     let maxGlow = 0;
-    let activeI = 0;
+    let active = 0;
     for (let i = 0; i < stations.length; i += 1) {
-      const rel = stationRel(p, i);
-      const sep = smoothstep(-11, -1.5, rel);
-      const open = 1.6 + sep * 4.2; // pillars part to present the service
-      const glow = smoothstep(-8, -2, rel) * (1 - smoothstep(1.5, 4.5, rel));
-      if (glow > maxGlow) {
-        maxGlow = glow;
-        activeI = i;
+      const st = stations[i];
+      const d = stationS(i) - cameraS(p);
+      const reveal = stationReveal(p, i);
+      const open = 1.8 + smoothstep(13, 5, d) * 4.6;
+      if (reveal > maxGlow) {
+        maxGlow = reveal;
+        active = i;
       }
-      const g = groups.current[i];
-      if (g) {
-        const l = g.children[0] as THREE.Mesh;
-        const r = g.children[1] as THREE.Mesh;
-        l.position.x = -open;
-        r.position.x = open;
-      }
-      leftMat.current[i].uniforms.uGlow.value = glow;
-      rightMat.current[i].uniforms.uGlow.value = glow;
-      const gm = glows.current[i];
-      if (gm) (gm.material as THREE.ShaderMaterial).uniforms.uOpacity.value = glow * 0.32;
+      const l = lefts.current[i];
+      const r = rights.current[i];
+      if (l) l.position.set(st.pos.x - st.right.x * open, py, st.pos.z - st.right.z * open);
+      if (r) r.position.set(st.pos.x + st.right.x * open, py, st.pos.z + st.right.z * open);
+      st.lm.uniforms.uGlow.value = reveal;
+      st.rm.uniforms.uGlow.value = reveal;
+      st.halo.uniforms.uOpacity.value = reveal * 0.32;
+      const h = halos.current[i];
+      if (h) h.lookAt(camera.position);
     }
-    glowRef.current = maxGlow;
-    tintRef.current.setRGB(...hueOf(activeI));
+    shared.glow.current = maxGlow;
+    shared.tint.current.setRGB(...hueOf(active));
+    shared.pool.current.set(stations[active].pos.x, stations[active].pos.z);
   });
 
   return (
@@ -230,40 +280,46 @@ function Stations({
         <group key={st.i}>
           <mesh
             ref={(el) => {
-              glows.current[st.i] = el;
+              halos.current[st.i] = el;
             }}
-            geometry={glowGeo}
-            material={st.glowMat}
-            position={[0, 1.4, st.z - 2.4]}
+            geometry={haloGeo}
+            material={st.halo}
+            position={[st.pos.x, py - 1.5, st.pos.z]}
           />
-          <group
+          <mesh
             ref={(el) => {
-              groups.current[st.i] = el;
+              lefts.current[st.i] = el;
             }}
-            position={[0, 0, st.z]}
-          >
-            <mesh geometry={pillarGeo} material={st.lm} position={[-1.6, COR.FLOOR_Y + COR.PILLAR_H / 2, 0]} />
-            <mesh geometry={pillarGeo} material={st.rm} position={[1.6, COR.FLOOR_Y + COR.PILLAR_H / 2, 0]} />
-          </group>
+            geometry={pillarGeo}
+            material={st.lm}
+            position={[st.pos.x, py, st.pos.z]}
+          />
+          <mesh
+            ref={(el) => {
+              rights.current[st.i] = el;
+            }}
+            geometry={pillarGeo}
+            material={st.rm}
+            position={[st.pos.x, py, st.pos.z]}
+          />
         </group>
       ))}
     </group>
   );
 }
 
-/* ---------------------- flowing light energy ---------------------- */
 const energyVert = /* glsl */ `
   attribute float aSeed;
   varying float vA;
   uniform float uTime;
   void main() {
     vec3 pos = position;
-    pos.z = mod(position.z + uTime * 1.4 + aSeed * 52.0, 52.0) - 46.0;
+    pos.z = mod(position.z + uTime * 1.3 + aSeed * 108.0, 108.0) - 102.0;
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
     float depth = -mv.z;
-    gl_PointSize = (18.0 * aSeed + 6.0) * (6.0 / depth);
-    vA = (1.0 - smoothstep(34.0, 55.0, depth)) * smoothstep(0.0, 4.0, depth);
+    gl_PointSize = (16.0 * aSeed + 5.0) * (6.0 / depth);
+    vA = (1.0 - smoothstep(30.0, 52.0, depth)) * smoothstep(0.0, 4.0, depth);
   }
 `;
 const energyFrag = /* glsl */ `
@@ -277,16 +333,15 @@ const energyFrag = /* glsl */ `
   }
 `;
 function Energy() {
-  const ref = useRef<THREE.ShaderMaterial>(null);
   const geo = useMemo(() => {
-    const n = 150;
+    const n = 170;
     const g = new THREE.BufferGeometry();
     const pos = new Float32Array(n * 3);
     const seed = new Float32Array(n);
     for (let i = 0; i < n; i += 1) {
-      pos[i * 3] = (Math.random() - 0.5) * 15;
-      pos[i * 3 + 1] = -3.4 + Math.random() * 10;
-      pos[i * 3 + 2] = Math.random() * 52 - 46;
+      pos[i * 3] = (Math.random() - 0.5) * 22;
+      pos[i * 3 + 1] = -3.4 + Math.random() * 11;
+      pos[i * 3 + 2] = Math.random() * 108 - 102;
       seed[i] = Math.random();
     }
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -307,56 +362,60 @@ function Energy() {
   );
   useFrame((state) => {
     mat.uniforms.uTime.value = state.clock.elapsedTime;
-    if (ref.current) ref.current.uniforms.uTime.value = state.clock.elapsedTime;
   });
   return <points geometry={geo} material={mat} />;
 }
 
-/* a dark, polished floor that catches the corridor's light down its centre
- * and, near the active installation, pools a soft reflection of its glow */
 const floorVert = /* glsl */ `
-  varying vec2 vUv;
+  varying vec3 vWorld;
   varying float vDepth;
   void main() {
-    vUv = uv;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xyz;
+    vec4 mv = viewMatrix * world;
     vDepth = -mv.z;
     gl_Position = projectionMatrix * mv;
   }
 `;
 const floorFrag = /* glsl */ `
   precision mediump float;
-  uniform float uGlow;
+  uniform vec2 uPool;
   uniform vec3 uTint;
-  varying vec2 vUv;
+  uniform float uGlow;
+  varying vec3 vWorld;
   varying float vDepth;
   void main() {
-    float centre = 1.0 - min(abs(vUv.x - 0.5) * 2.0, 1.0);
-    float sheen = pow(centre, 2.4);
-    float depthFade = 1.0 - smoothstep(22.0, 60.0, vDepth);
-    float near = smoothstep(0.0, 7.0, vDepth);
+    float dist = length(vWorld.xz - uPool);
+    float pool = smoothstep(11.0, 0.0, dist) * uGlow;
+    float depthFade = 1.0 - smoothstep(24.0, 60.0, vDepth);
     vec3 base = vec3(0.005, 0.007, 0.013);
-    vec3 col = base + (vec3(0.035, 0.048, 0.085) + uTint * 0.22 * uGlow) * sheen * depthFade * near;
+    vec3 col = base + (uTint * 0.16 * pool + vec3(0.02, 0.028, 0.05) * pool) * depthFade;
     gl_FragColor = vec4(col, 1.0);
   }
 `;
-function Floor({ glowRef, tintRef }: { glowRef: { current: number }; tintRef: { current: THREE.Color } }) {
+function Floor({ shared }: { shared: Shared }) {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
         vertexShader: floorVert,
         fragmentShader: floorFrag,
-        uniforms: { uGlow: { value: 0 }, uTint: { value: new THREE.Color(0.7, 0.8, 1.0) } },
+        uniforms: {
+          uPool: { value: new THREE.Vector2() },
+          uTint: { value: new THREE.Color(0.7, 0.8, 1.0) },
+          uGlow: { value: 0 },
+        },
       }),
     []
   );
   useFrame(() => {
-    mat.uniforms.uGlow.value += (glowRef.current - mat.uniforms.uGlow.value) * 0.12;
-    (mat.uniforms.uTint.value as THREE.Color).lerp(tintRef.current, 0.06);
+    const u = mat.uniforms;
+    (u.uPool.value as THREE.Vector2).lerp(shared.pool.current, 0.08);
+    u.uGlow.value += (shared.glow.current - u.uGlow.value) * 0.1;
+    (u.uTint.value as THREE.Color).lerp(shared.tint.current, 0.05);
   });
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, COR.FLOOR_Y, -20]} material={mat}>
-      <planeGeometry args={[90, 150]} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, FLOOR_Y, -48]} material={mat}>
+      <planeGeometry args={[60, 160]} />
     </mesh>
   );
 }
@@ -364,16 +423,20 @@ function Floor({ glowRef, tintRef }: { glowRef: { current: number }; tintRef: { 
 export default function LightCorridorCanvas({
   eventSource,
   scroll,
-  count,
 }: {
   eventSource: RefObject<HTMLElement | null>;
   scroll?: { get: () => number };
-  count: number;
+  count?: number;
 }) {
   const reduced = usePrefersReducedMotion();
   const mobile = useIsMobile();
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
+  const shared = useRef<Shared>({
+    glow: { current: 0 },
+    tint: { current: new THREE.Color(0.7, 0.8, 1.0) },
+    pool: { current: new THREE.Vector2() },
+  }).current;
 
   useEffect(() => {
     const el = ref.current;
@@ -384,8 +447,6 @@ export default function LightCorridorCanvas({
   }, []);
 
   const active = !reduced && visible;
-  const floorGlow = useRef(0);
-  const floorTint = useRef(new THREE.Color(0.7, 0.8, 1.0));
 
   return (
     <div ref={ref} className="absolute inset-0">
@@ -393,18 +454,18 @@ export default function LightCorridorCanvas({
         className="!absolute inset-0"
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         dpr={reduced ? 1 : [1, mobile ? 1.4 : 1.8]}
-        camera={{ position: [0, 0.3, COR.START], fov: 42 }}
+        camera={{ position: [0, 0.4, 2], fov: 46 }}
         frameloop={active ? "always" : "never"}
         eventSource={eventSource as unknown as RefObject<HTMLElement>}
         eventPrefix="client"
         onCreated={({ scene }) => {
-          scene.fog = new THREE.FogExp2(0x000000, 0.03);
+          scene.fog = new THREE.FogExp2(0x000000, 0.038);
         }}
       >
         <Rig scroll={scroll} />
-        <Floor glowRef={floorGlow} tintRef={floorTint} />
+        <Floor shared={shared} />
         <Colonnade />
-        <Stations count={count} scroll={scroll} glowRef={floorGlow} tintRef={floorTint} />
+        <Stations scroll={scroll} shared={shared} />
         <Energy />
       </Canvas>
     </div>

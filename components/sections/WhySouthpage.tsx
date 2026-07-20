@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { useReducedMotion, useScroll } from "framer-motion";
 import { WHY_CARDS } from "@/lib/data";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { stationRel } from "@/components/canvas/LightCorridorCanvas";
+import { stationReveal } from "@/components/canvas/LightCorridorCanvas";
 
 const LightCorridorCanvas = dynamic(() => import("@/components/canvas/LightCorridorCanvas"), {
   ssr: false,
@@ -51,10 +51,9 @@ function LightCorridor() {
       const p = scrollYProgress.get();
       let activity = 0;
       for (let i = 0; i < N; i += 1) {
-        const rel = stationRel(p, i);
-        // the panel settles in as the pillars part, and slips away as the
-        // architecture closes behind it — one installation at a time
-        const reveal = smoothstep(-5, -1.5, rel) * (1 - smoothstep(1, 3.5, rel));
+        // the panel settles into the opening as the camera rounds the corner
+        // and the pillars part — one installation at a time
+        const reveal = stationReveal(p, i);
         activity = Math.max(activity, reveal);
         const el = panels.current[i];
         if (el) {
