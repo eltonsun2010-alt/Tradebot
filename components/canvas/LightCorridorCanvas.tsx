@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, MeshReflectorMaterial } from "@react-three/drei";
+import { Environment, Lightformer, MeshReflectorMaterial, Text } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState, type RefObject, type ReactNode } from "react";
 import * as THREE from "three";
 import { WHY_CARDS } from "@/lib/data";
@@ -9,12 +9,13 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /* ------------------------------------------------------------------ *
- * The Southpage headquarters — a walk through one contemporary building,
- * rendered like an architectural interior: image-based lighting from a
- * soft daylight environment, a polished reflective stone floor, filmic
- * tone-mapping, and real premium materials (travertine, white concrete,
- * black polished stone, structural glass, brushed aluminium, bronze,
- * oak). Rooms are an enfilade of enclosed spaces joined by doorways.
+ * The Southpage headquarters — a walk through one contemporary building
+ * where each principle is a curated exhibit built permanently into the
+ * architecture. The visitor faces the direction of travel; as they enter
+ * a room the layout draws the eye to a feature wall (a recessed stone
+ * display, an illuminated glass panel, a monumental etched surface), the
+ * camera turns to appreciate it, then turns back and continues. Nothing
+ * floats, nothing pops in — the content is part of the building.
  * ------------------------------------------------------------------ */
 
 const N = WHY_CARDS.length;
@@ -29,6 +30,13 @@ const FLOOR_Y = -1.7;
 const EYE = 0.25;
 const DOOR_W = 5;
 const DOOR_H = 5;
+
+// in-scene museum lettering — the site's display face, bundled locally so it
+// resolves offline and under the Pages sub-path (no runtime CDN dependency)
+// TTF (not woff2) — troika's in-browser parser does not decode woff2
+const FB = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const FONT_BOLD = `${FB}/fonts/syne-700.ttf`;
+const FONT_REG = `${FB}/fonts/syne-400.ttf`;
 
 const CURVE = (() => {
   const pts: THREE.Vector3[] = [];
@@ -69,6 +77,10 @@ function frameAt(s: number): Frame {
 function Pp(f: Frame, lx: number, ly: number, lz: number): [number, number, number] {
   return [f.pos.x + f.right.x * lx + f.fwd.x * lz, FLOOR_Y + ly, f.pos.z + f.right.z * lx + f.fwd.z * lz];
 }
+function PpV(f: Frame, lx: number, ly: number, lz: number): THREE.Vector3 {
+  const p = Pp(f, lx, ly, lz);
+  return new THREE.Vector3(p[0], p[1], p[2]);
+}
 
 /* --------------------------- premium materials --------------------------- */
 const travertine = new THREE.MeshStandardMaterial({ color: 0xd7cdba, roughness: 0.92, metalness: 0.02 });
@@ -81,6 +93,10 @@ const oak = new THREE.MeshStandardMaterial({ color: 0x9c754a, roughness: 0.64, m
 const reveal = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.9, metalness: 0 });
 const glass = new THREE.MeshPhysicalMaterial({ color: 0x2b3a49, metalness: 0, roughness: 0.05, transparent: true, opacity: 0.22, envMapIntensity: 1.7, side: THREE.DoubleSide });
 const skyMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.66, 0.75, 0.94), toneMapped: false });
+// a recessed display surface: dark stone that is softly backlit, not a neon
+// object — the faint self-illumination reads like light washing over the niche
+const displayLit = new THREE.MeshStandardMaterial({ color: 0x0e1013, roughness: 0.42, metalness: 0.4, emissive: 0x1c222b, emissiveIntensity: 0.55, envMapIntensity: 1.1 });
+const glassLit = new THREE.MeshPhysicalMaterial({ color: 0x1a2a38, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.5, emissive: 0x22303e, emissiveIntensity: 0.5, envMapIntensity: 1.6, side: THREE.DoubleSide });
 
 const shaftMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: {},
@@ -93,6 +109,36 @@ const HUES: [number, number, number][] = [
   [0.72, 0.8, 1.0], [0.86, 0.92, 1.0], [0.74, 0.84, 1.0], [0.9, 0.95, 1.0], [0.78, 0.86, 1.0], [1.0, 0.86, 0.62],
 ];
 const hueOf = (i: number) => new THREE.Color(...HUES[((i % HUES.length) + HUES.length) % HUES.length]);
+
+/* -------- per-room exhibit layout: where each principle is built in -------- */
+type Feature = {
+  side: 1 | -1; // which wall the content lives on (-1 left, +1 right)
+  wx: number; // lateral offset to the wall face
+  lz: number; // offset along travel (a little ahead, so the eye is led there)
+  cy: number; // reading height of the content
+  panelW: number;
+  panelH: number;
+  fs: number; // title size
+  w: number; // text wrap width
+  kind: "stone" | "glass" | "monolith";
+};
+const FEATURES: Feature[] = [
+  // Lobby: an illuminated glass panel on the glazed façade (right), clear of
+  // the floating stair that sculpts the left of the room
+  { side: 1, wx: 6.7, lz: 1.0, cy: 3.0, panelW: 5.2, panelH: 5.2, fs: 0.58, w: 4.6, kind: "glass" },
+  { side: -1, wx: -9.4, lz: 2.6, cy: 3.8, panelW: 7.5, panelH: 8.4, fs: 0.86, w: 6.6, kind: "stone" },
+  { side: 1, wx: 3.9, lz: 0.0, cy: 2.7, panelW: 5.2, panelH: 4.2, fs: 0.46, w: 4.6, kind: "glass" },
+  { side: 1, wx: 5.5, lz: 1.2, cy: 2.9, panelW: 5.6, panelH: 4.8, fs: 0.56, w: 5.0, kind: "stone" },
+  { side: -1, wx: -8.5, lz: 2.0, cy: 3.2, panelW: 6.6, panelH: 6.0, fs: 0.68, w: 5.8, kind: "stone" },
+  { side: 1, wx: 4.6, lz: 1.0, cy: 2.3, panelW: 4.4, panelH: 4.6, fs: 0.46, w: 3.9, kind: "monolith" },
+];
+const featureOf = (i: number) => FEATURES[i % FEATURES.length];
+// the point the camera turns to appreciate — the centre of the exhibit
+function featureWorld(i: number): THREE.Vector3 {
+  const f = frameAt(stationS(i));
+  const ft = featureOf(i);
+  return PpV(f, ft.wx - ft.side * 0.12, ft.cy, ft.lz);
+}
 
 /* --------------------------- building blocks --------------------------- */
 function B({ mat, p, s, ry = 0, tl = 0 }: { mat: THREE.Material; p: [number, number, number]; s: [number, number, number]; ry?: number; tl?: number }) {
@@ -151,6 +197,79 @@ function FloatingStair({ f, lx, top, steps = 12 }: { f: Frame; lx: number; top: 
 function CurvedWall({ f, lx, lz, r, h, mat, a0, aLen }: { f: Frame; lx: number; lz: number; r: number; h: number; mat: THREE.Material; a0: number; aLen: number }) {
   const geo = useMemo(() => new THREE.CylinderGeometry(r, r, h, 40, 1, true, a0, aLen), [r, h, a0, aLen]);
   return <mesh geometry={geo} material={mat} position={Pp(f, lx, h / 2, lz)} rotation={[0, f.heading, 0]} />;
+}
+
+/* --------- the exhibit: each principle, built into the feature wall --------- */
+function FeatureExhibit({ i, f }: { i: number; f: Frame }) {
+  const card = WHY_CARDS[i];
+  const ft = featureOf(i);
+  const h = f.heading;
+  const { side, wx, lz, cy, panelW, panelH, fs, w } = ft;
+  const theta = h - side * Math.PI / 2; // lettering lies flush, facing the room
+  const textX = wx - side * 0.14; // content sits just proud of the display face
+  const idx = String(i + 1).padStart(2, "0");
+  const back = ft.kind === "glass" ? glassLit : displayLit;
+
+  return (
+    <group>
+      {/* the display niche, set into the wall, with a slim bronze surround */}
+      <B mat={bronze} p={Pp(f, wx + side * 0.09, cy, lz)} s={[0.08, panelH + 0.44, panelW + 0.44]} ry={h} />
+      <B mat={back} p={Pp(f, wx, cy, lz)} s={[0.12, panelH, panelW]} ry={h} />
+      {ft.kind === "monolith" && (
+        // a freestanding stone plinth so the terrace exhibit reads as built-in
+        <B mat={travertine} p={Pp(f, wx + side * 0.35, cy - 0.2, lz)} s={[0.9, panelH + 1.6, panelW + 1.2]} ry={h} />
+      )}
+      {/* a recessed picture-light fixture above the display */}
+      <B mat={bronze} p={Pp(f, textX + side * 0.02, cy + panelH / 2 - 0.2, lz)} s={[0.16, 0.1, panelW * 0.82]} ry={h} />
+
+      {/* the content — etched permanently into the surface */}
+      <Text
+        font={FONT_BOLD}
+        fontSize={fs * 0.32}
+        color="#9fc0ff"
+        anchorX="center"
+        anchorY="middle"
+        letterSpacing={0.28}
+        position={Pp(f, textX, cy + fs * 1.7, lz)}
+        rotation={[0, theta, 0]}
+      >
+        {idx}
+      </Text>
+      <Text
+        font={FONT_BOLD}
+        fontSize={fs}
+        color="#f4f1ea"
+        anchorX="center"
+        anchorY="middle"
+        textAlign="center"
+        maxWidth={w}
+        lineHeight={1.02}
+        letterSpacing={-0.01}
+        outlineWidth={fs * 0.012}
+        outlineColor="#05060a"
+        outlineOpacity={0.55}
+        position={Pp(f, textX, cy + fs * 0.45, lz)}
+        rotation={[0, theta, 0]}
+      >
+        {card.title}
+      </Text>
+      <B mat={bronze} p={Pp(f, textX, cy - fs * 0.55, lz)} s={[0.05, 0.035, w * 0.44]} ry={h} />
+      <Text
+        font={FONT_REG}
+        fontSize={fs * 0.3}
+        color="#b9c0cb"
+        anchorX="center"
+        anchorY="top"
+        textAlign="center"
+        maxWidth={w * 0.94}
+        lineHeight={1.42}
+        position={Pp(f, textX, cy - fs * 0.9, lz)}
+        rotation={[0, theta, 0]}
+      >
+        {card.body}
+      </Text>
+    </group>
+  );
 }
 
 /* ------------------------------ the rooms ------------------------------ */
@@ -272,7 +391,10 @@ function Building() {
   return (
     <group>
       {frames.map((f, i) => (
-        <Room key={i} i={i} f={f} />
+        <group key={i}>
+          <Room i={i} f={f} />
+          <FeatureExhibit i={i} f={f} />
+        </group>
       ))}
     </group>
   );
@@ -287,16 +409,17 @@ function AccentLight({ shared }: { shared: Shared }) {
   useFrame(() => {
     const l = light.current;
     if (!l) return;
-    v.current.set(shared.active.current.x, 4.5, shared.active.current.z);
+    v.current.set(shared.active.current.x, shared.active.current.y + 1.6, shared.active.current.z);
     l.position.lerp(v.current, 0.07);
     l.color.lerp(shared.tint.current, 0.05);
-    l.intensity += (18 + shared.glow.current * 40 - l.intensity) * 0.07;
+    l.intensity += (16 + shared.glow.current * 34 - l.intensity) * 0.07;
   });
-  return <pointLight ref={light} distance={34} decay={1.5} />;
+  return <pointLight ref={light} distance={30} decay={1.5} />;
 }
 
 function StationDrivers({ scroll, shared }: { scroll?: { get: () => number }; shared: Shared }) {
-  const stations = useMemo(() => Array.from({ length: N }, (_, i) => ({ frame: frameAt(stationS(i)), hue: hueOf(i) })), []);
+  // wash the active exhibit itself with warm light so it reads as lit artwork
+  const targets = useMemo(() => Array.from({ length: N }, (_, i) => ({ pos: featureWorld(i), hue: hueOf(i) })), []);
   useFrame(() => {
     const p = scroll ? scroll.get() : 0;
     let maxGlow = 0;
@@ -309,8 +432,8 @@ function StationDrivers({ scroll, shared }: { scroll?: { get: () => number }; sh
       }
     }
     shared.glow.current = maxGlow;
-    shared.tint.current.lerp(stations[active].hue, 0.05);
-    shared.active.current.lerp(stations[active].frame.pos, 0.07);
+    shared.tint.current.lerp(targets[active].hue, 0.05);
+    shared.active.current.lerp(targets[active].pos, 0.07);
   });
   return null;
 }
@@ -320,6 +443,10 @@ function Rig({ scroll }: { scroll?: { get: () => number } }) {
   const eased = useRef(0);
   const bank = useRef(0);
   const mouse = useRef(new THREE.Vector2());
+  const targets = useMemo(() => Array.from({ length: N }, (_, i) => featureWorld(i)), []);
+  const look = useRef(new THREE.Vector3());
+  const smooth = useRef(new THREE.Vector3());
+  const inited = useRef(false);
   useFrame((state, delta) => {
     const target = scroll ? scroll.get() : 0;
     eased.current += (target - eased.current) * Math.min(1, delta * 1.5); // slow, cinematic
@@ -329,10 +456,36 @@ function Rig({ scroll }: { scroll?: { get: () => number } }) {
     mouse.current.y += (state.pointer.y - mouse.current.y) * Math.min(1, delta * 1.2);
     const f = frameAt(s);
     const ahead = frameAt(s + AHEAD);
-    camera.position.set(f.pos.x + mouse.current.x * 0.32, f.pos.y + EYE + mouse.current.y * 0.16 + Math.sin(t * 0.05) * 0.03, f.pos.z);
-    camera.lookAt(ahead.pos.x, ahead.pos.y + EYE + 0.35, ahead.pos.z);
+    camera.position.set(
+      f.pos.x + mouse.current.x * 0.24,
+      f.pos.y + EYE + mouse.current.y * 0.12 + Math.sin(t * 0.05) * 0.03,
+      f.pos.z,
+    );
+
+    // primary gaze: down the direction of travel
+    look.current.set(ahead.pos.x, ahead.pos.y + EYE + 0.35, ahead.pos.z);
+    // as the layout brings a feature wall alongside, the eye is drawn to it,
+    // holds while passing, then returns forward — a bell in distance-to-station
+    let gaze = 0;
+    let gi = 0;
+    for (let i = 0; i < N; i += 1) {
+      const g = smoothstep(9, 3, Math.abs(stationS(i) - s));
+      if (g > gaze) {
+        gaze = g;
+        gi = i;
+      }
+    }
+    if (gaze > 0) look.current.lerp(targets[gi], gaze * 0.88);
+
+    if (!inited.current) {
+      smooth.current.copy(look.current);
+      inited.current = true;
+    }
+    smooth.current.lerp(look.current, Math.min(1, delta * 3));
+    camera.lookAt(smooth.current);
+
     const turn = f.fwd.x * ahead.fwd.z - f.fwd.z * ahead.fwd.x;
-    const bankTarget = clamp(turn * 1.8, -0.02, 0.02);
+    const bankTarget = clamp(turn * 1.8, -0.02, 0.02) * (1 - gaze);
     bank.current += (bankTarget - bank.current) * Math.min(1, delta * 1.2);
     camera.rotateZ(bank.current);
   });

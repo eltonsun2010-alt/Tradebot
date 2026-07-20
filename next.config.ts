@@ -9,6 +9,9 @@ const basePath = process.env.PAGES_BASE_PATH || "";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Exposed to the client so runtime asset fetches (e.g. the in-scene museum
+  // font loaded by troika/three) resolve under the Pages sub-path too.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   // three.js ships untranspiled ESM in places; let Next handle it.
   transpilePackages: ["three"],
   eslint: {
