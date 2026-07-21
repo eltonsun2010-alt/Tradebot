@@ -143,10 +143,19 @@ const HUES = [
 type Shared = { spos: { current: number }; appear: { current: number } };
 
 /* --------------------- the ribbon of illuminated silk --------------------- */
-// a THIN flat band swept along the flow — a strip of silk, not a tube. Two
-// vertices per step; the face normal is the twisted "up" so the flat surface
-// catches light and turns edge-on to a fine line as it rolls.
-function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (u: number) => number): THREE.BufferGeometry {
+// A continuous flattened-tube band swept along the flow — a wide, very thin
+// ribbon of silk with a real (tiny) thickness. Because it is a closed lens
+// section, it NEVER collapses to zero screen area: as it rolls edge-on the
+// broad face turns away but the thin edge still presents a fine bright line, so
+// the sculpture stays physically present from beginning to end. Existence lives
+// in the mesh; illumination is handled entirely in the material.
+const CROSS = 10; // points around the flattened cross-section
+function stripGeometry(
+  halfW: (u: number) => number,
+  twistAmp: number,
+  offset: (u: number) => number,
+  halfT = 0.05,
+): THREE.BufferGeometry {
   const n = 380;
   const pos: number[] = [];
   const nor: number[] = [];
@@ -163,20 +172,38 @@ function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (
     const Nr = new THREE.Vector3().crossVectors(T, R).normalize();
     const tw = twistAmp * Math.sin(u * 16.0);
     const w = R.clone().multiplyScalar(Math.cos(tw)).add(Nr.clone().multiplyScalar(Math.sin(tw))).normalize(); // width axis
-    const nrm = Nr.clone().multiplyScalar(Math.cos(tw)).add(R.clone().multiplyScalar(-Math.sin(tw))).normalize(); // flat-face normal
+    const nrm = Nr.clone().multiplyScalar(Math.cos(tw)).add(R.clone().multiplyScalar(-Math.sin(tw))).normalize(); // thickness axis
     const c = p.clone().add(Nr.clone().multiplyScalar(offset(u)));
     const hw = halfW(u);
-    const l = c.clone().add(w.clone().multiplyScalar(-hw));
-    const r = c.clone().add(w.clone().multiplyScalar(hw));
     const b = Math.min(1, widen(u)); // brighter only where it swells for a stop
-    pos.push(l.x, l.y, l.z, r.x, r.y, r.z);
-    nor.push(nrm.x, nrm.y, nrm.z, nrm.x, nrm.y, nrm.z);
-    uv.push(u, 0, u, 1);
-    boost.push(b, b);
+    for (let j = 0; j < CROSS; j += 1) {
+      const th = (j / CROSS) * Math.PI * 2;
+      const ct = Math.cos(th);
+      const st = Math.sin(th);
+      // flattened ellipse: wide across w, wafer-thin across nrm
+      const point = c.clone()
+        .add(w.clone().multiplyScalar(hw * ct))
+        .add(nrm.clone().multiplyScalar(halfT * st));
+      // outward normal of that ellipse (semi-axes hw along w, halfT along nrm)
+      const normal = w.clone().multiplyScalar(halfT * ct)
+        .add(nrm.clone().multiplyScalar(hw * st))
+        .normalize();
+      pos.push(point.x, point.y, point.z);
+      nor.push(normal.x, normal.y, normal.z);
+      // uv.y peaks (0.5) at the broad-face centres, falls to the edges → the
+      // glow band still reads "bright down the middle of the face"
+      uv.push(u, 0.5 + 0.5 * ct);
+      boost.push(b);
+    }
   }
   for (let i = 0; i < n; i += 1) {
-    const a = i * 2;
-    idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    for (let j = 0; j < CROSS; j += 1) {
+      const a = i * CROSS + j;
+      const bb = i * CROSS + ((j + 1) % CROSS);
+      const c = (i + 1) * CROSS + j;
+      const d = (i + 1) * CROSS + ((j + 1) % CROSS);
+      idx.push(a, c, bb, bb, c, d);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -208,25 +235,37 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, sheenCol: THREE.Colo
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
         float ndv = abs(dot(N, V));
-        // flat silk: luminous facing us, but never vanishing edge-on — it keeps
-        // a fine bright line so the sculpture stays continuous as it rolls
-        float face = mix(0.3, 1.0, smoothstep(0.05, 0.82, ndv));
         vec3 L = normalize(vec3(0.3, 0.75, 0.55));
         float sheen = pow(abs(dot(N, L)), 2.4);            // refined satin highlight
         float across = 1.0 - abs(vUv.y - 0.5) * 2.0;
         float softEdge = smoothstep(0.0, uSoft, across);   // edges bloom softly
         float glow = pow(clamp(across, 0.0, 1.0), 1.9);    // subtle internal glow
         float shimmer = 0.86 + 0.14 * sin(vUv.x * 15.0 - uTime * 1.0);
-        // hold both ends until they are lost in distance — no trail-like cut-off
-        float ends = smoothstep(0.0, 0.02, vUv.x) * smoothstep(1.0, 0.985, vUv.x);
+        // gentle caps so the very ends of the mesh aren't hard-edged
+        float ends = smoothstep(0.0, 0.015, vUv.x) * smoothstep(1.0, 0.985, vUv.x);
+        // the cinematic reveal wipes the silk into being as the journey opens
         float wipe = (1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x)) * smoothstep(0.0, 0.22, uAppear);
-        // distance keeps it present but softer and lower-contrast, then lets it
-        // dissolve into black far away — "it continues beyond what I can see"
-        float dist = clamp(exp(-0.014 * vDepth), 0.09, 1.0);
         // calm during travel; the brightest silk only at the stops it swells for
         float boost = 0.5 + 0.85 * vBoost;
+
+        // ── EXISTENCE (always drawn) ─────────────────────────────────────
+        // A faint, constant body that does NOT depend on facing the camera, so
+        // the ribbon is physically present even edge-on and never disappears.
+        // Only a soft, floored distance term lets it recede — it dims into the
+        // dark but the mesh is always there: "the journey continues".
+        float presence = clamp(exp(-0.006 * vDepth), 0.42, 1.0);
+        float base = 0.06 * (0.55 + 0.45 * softEdge) * ends * wipe * presence;
+
+        // ── ILLUMINATION (variable) ──────────────────────────────────────
+        // The luminous silk: bright when its broad face turns toward you, lifted
+        // at the stops, softened by atmospheric haze in the distance. Haze only
+        // reduces the light — never the ribbon's existence.
+        float face = 0.4 + 0.6 * smoothstep(0.05, 0.82, ndv);
+        float haze = clamp(exp(-0.013 * vDepth), 0.0, 1.0);
+        float lit = (0.10 + 0.24 * glow) * face * softEdge * shimmer * boost * ends * wipe * haze;
+
         vec3 col = mix(uEdge, uCore, glow) + sheen * 0.3 * uSheen;
-        float a = (0.12 + 0.24 * glow) * face * softEdge * shimmer * ends * wipe * uReveal * uAlpha * boost * dist;
+        float a = (base + lit) * uReveal * uAlpha;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -252,11 +291,12 @@ function ringMaterial(color: THREE.Color) {
 function Ribbon({ shared }: { shared: Shared }) {
   // thin, elegant — width breathes gently and swells only a little at a stop
   const wMain = (u: number) => 0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u);
-  const bodyGeo = useMemo(() => stripGeometry(wMain, 0.9, () => 0), []);
-  const haloGeo = useMemo(() => stripGeometry((u) => wMain(u) * 2.2 + 0.25, 0.9, () => 0), []);
+  // a calmer roll now the tube keeps a visible edge even side-on
+  const bodyGeo = useMemo(() => stripGeometry(wMain, 0.35, () => 0, 0.05), []);
+  const haloGeo = useMemo(() => stripGeometry((u) => wMain(u) * 2.2 + 0.25, 0.35, () => 0, 0.06), []);
   // companion silks that part and rejoin
-  const sA = useMemo(() => stripGeometry(() => 0.09, 1.0, (u) => 0.7 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
-  const sB = useMemo(() => stripGeometry(() => 0.08, 1.1, (u) => -0.9 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
+  const sA = useMemo(() => stripGeometry(() => 0.09, 0.4, (u) => 0.7 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 0.03), []);
+  const sB = useMemo(() => stripGeometry(() => 0.08, 0.45, (u) => -0.9 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 0.03), []);
   const body = useMemo(() => silkMaterial(new THREE.Color(0.9, 0.94, 1.0), new THREE.Color(0.36, 0.5, 0.86), new THREE.Color(0.95, 0.92, 0.82), 0.78, 0.42), []);
   const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), new THREE.Color(0.22, 0.34, 0.78), new THREE.Color(0.7, 0.8, 1.0), 0.15, 0.85), []);
   const thin = useMemo(() => silkMaterial(new THREE.Color(0.78, 0.88, 1.0), new THREE.Color(0.38, 0.52, 0.9), new THREE.Color(0.85, 0.9, 1.0), 0.32, 0.6), []);
