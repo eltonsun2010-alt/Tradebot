@@ -48,7 +48,18 @@ const CURVE_L = CURVE.getLength();
 
 const stationU = (i: number) => clamp((LEAD_S + i * GAP_S) / CURVE_L, 0, 1);
 export const stationS = (i: number) => LEAD_S + i * GAP_S;
-export const cameraMaxS = stationS(N - 1) + TAIL_S;
+
+// The Automation chapter — the SAME ribbon, further along the SAME curve. After
+// the sixth principle the ribbon travels on, slows, widens, and splits into four
+// pathways (the capabilities) that peel from its own edges, then merges back. It
+// is one continuous journey and one camera — never a second sculpture.
+export const AUTO_LABELS = ["Workflow Automation", "AI Assistants", "Business Integrations", "Customer Systems"] as const;
+const NA = AUTO_LABELS.length;
+const AUTO_S0 = 138;                                // the ribbon begins to split
+const AUTO_S1 = 196;                                // the branches have merged back
+const autoStationS = (j: number) => 150 + j * 12;   // the four capabilities: 150,162,174,186
+
+export const cameraMaxS = AUTO_S1 + 14;             // the journey now runs through Automation
 export const cameraS = (p: number) => p * cameraMaxS;
 export const N_ROOMS = N;
 function clamp(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
@@ -58,6 +69,10 @@ function smoothstep(a: number, b: number, x: number) {
 }
 export const stationReveal = (p: number, i: number) => smoothstep(11, 3.2, Math.abs(stationS(i) - cameraS(p)));
 const revealAtS = (s: number, i: number) => smoothstep(11.5, 3.6, Math.abs(stationS(i) - s));
+// how deep into the automation zone we are, and how far the branches have peeled
+const autoZone = (s: number) => smoothstep(AUTO_S0 - 16, AUTO_S0, s) * smoothstep(AUTO_S1 + 16, AUTO_S1, s);
+const autoEmerge = (s: number) => smoothstep(AUTO_S0, AUTO_S0 + 14, s) * smoothstep(AUTO_S1, AUTO_S1 - 14, s);
+const autoStationReveal = (s: number, j: number) => smoothstep(8.5, 2.8, Math.abs(autoStationS(j) - s));
 
 // how much the ribbon fattens as it nears each destination (the "widen & wrap")
 function widen(u: number): number {
@@ -69,17 +84,23 @@ function widen(u: number): number {
   return w;
 }
 
-// the flow slows, nearly pauses to present, then eases away — never constant
+// the flow slows, nearly pauses to present, then eases away — never constant. It
+// slows at each of the six principles and again at each of the four automation
+// pathways, so the whole journey shares one rhythm.
 const NS = 500;
+const DIP_P = 6.0 / cameraMaxS; // a station dip ~6 arc-units wide, independent of length
 const S_LUT = (() => {
-  const pst = Array.from({ length: N }, (_, i) => stationS(i) / cameraMaxS);
+  const pst = [
+    ...Array.from({ length: N }, (_, i) => stationS(i) / cameraMaxS),
+    ...Array.from({ length: NA }, (_, j) => autoStationS(j) / cameraMaxS),
+  ];
   const cum = [0];
   let total = 0;
   for (let k = 1; k <= NS; k += 1) {
     const p = k / NS;
     let sp = 1;
     for (const ps of pst) {
-      const d = (p - ps) / 0.055;
+      const d = (p - ps) / DIP_P;
       sp -= 0.86 * Math.exp(-d * d);
     }
     total += Math.max(0.06, sp);
@@ -161,6 +182,8 @@ function stripGeometry(
   const nor: number[] = [];
   const uv: number[] = [];
   const boost: number[] = [];
+  const emg: number[] = [];
+  const flow: number[] = [];
   const idx: number[] = [];
   for (let i = 0; i <= n; i += 1) {
     const u = i / n;
@@ -175,7 +198,8 @@ function stripGeometry(
     const nrm = Nr.clone().multiplyScalar(Math.cos(tw)).add(R.clone().multiplyScalar(-Math.sin(tw))).normalize(); // thickness axis
     const c = p.clone().add(Nr.clone().multiplyScalar(offset(u)));
     const hw = halfW(u);
-    const b = Math.min(1, widen(u)); // brighter only where it swells for a stop
+    const az = autoZone(u * CURVE_L);
+    const b = Math.min(1, widen(u) + 0.5 * az); // brighter at a stop, and as it gathers to split
     for (let j = 0; j < CROSS; j += 1) {
       const th = (j / CROSS) * Math.PI * 2;
       const ct = Math.cos(th);
@@ -194,6 +218,8 @@ function stripGeometry(
       // glow band still reads "bright down the middle of the face"
       uv.push(u, 0.5 + 0.5 * ct);
       boost.push(b);
+      emg.push(1); // the main ribbon is always fully present
+      flow.push(az); // information pulses only run once it enters Automation
     }
   }
   for (let i = 0; i < n; i += 1) {
@@ -210,8 +236,99 @@ function stripGeometry(
   g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
   g.setAttribute("aBoost", new THREE.Float32BufferAttribute(boost, 1));
+  g.setAttribute("aEmerge", new THREE.Float32BufferAttribute(emg, 1));
+  g.setAttribute("aFlow", new THREE.Float32BufferAttribute(flow, 1));
   g.setIndex(idx);
   return g;
+}
+
+// A flattened-silk tube swept along an ARBITRARY curve (used for the automation
+// branches). Sampled in uniform parameter space so the emerge/flow functions,
+// keyed on arc-length s, line up. Same cross-section and attributes as the main
+// ribbon, so a branch is unmistakably the same material.
+function tubeAlong(curve: THREE.Curve<THREE.Vector3>, a: number, b: number, halfW: number, halfT: number): THREE.BufferGeometry {
+  const n = 200;
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uv: number[] = [];
+  const boost: number[] = [];
+  const emg: number[] = [];
+  const flow: number[] = [];
+  const idx: number[] = [];
+  const P = new THREE.Vector3();
+  const T = new THREE.Vector3();
+  for (let i = 0; i <= n; i += 1) {
+    const u = i / n;
+    const s = a + u * (b - a);
+    curve.getPoint(u, P);
+    curve.getTangent(u, T).normalize();
+    let R = new THREE.Vector3().crossVectors(UP, T);
+    if (R.lengthSq() < 1e-4) R.set(1, 0, 0);
+    R.normalize();
+    const Nr = new THREE.Vector3().crossVectors(T, R).normalize();
+    const taper = Math.pow(Math.sin(Math.PI * u), 0.35);
+    const hw = halfW * (0.5 + 0.5 * taper);
+    const e = autoEmerge(s);
+    for (let j = 0; j < CROSS; j += 1) {
+      const th = (j / CROSS) * Math.PI * 2;
+      const ct = Math.cos(th);
+      const st = Math.sin(th);
+      const point = P.clone().addScaledVector(R, hw * ct).addScaledVector(Nr, halfT * st);
+      const normal = R.clone().multiplyScalar(halfT * ct).addScaledVector(Nr, hw * st).normalize();
+      pos.push(point.x, point.y, point.z);
+      nor.push(normal.x, normal.y, normal.z);
+      uv.push(u, 0.5 + 0.5 * ct);
+      boost.push(0.7 * e);
+      emg.push(e);
+      flow.push(e);
+    }
+  }
+  for (let i = 0; i < n; i += 1) {
+    for (let j = 0; j < CROSS; j += 1) {
+      const p0 = i * CROSS + j;
+      const p1 = i * CROSS + ((j + 1) % CROSS);
+      const p2 = (i + 1) * CROSS + j;
+      const p3 = (i + 1) * CROSS + ((j + 1) % CROSS);
+      idx.push(p0, p2, p1, p1, p2, p3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute("aBoost", new THREE.Float32BufferAttribute(boost, 1));
+  g.setAttribute("aEmerge", new THREE.Float32BufferAttribute(emg, 1));
+  g.setAttribute("aFlow", new THREE.Float32BufferAttribute(flow, 1));
+  g.setIndex(idx);
+  return g;
+}
+
+// the branches peel from the ribbon's own edges: a branch starts just inside the
+// edge and only swings out where it has emerged, then retracts and rejoins
+const AUTO_BASE_ANG = [0.6, -0.6, Math.PI + 0.6, Math.PI - 0.6];
+const AUTO_RMAX = 2.1;
+const AUTO_TWIST = 1.2 * Math.PI;
+function ribbonHalfWAt(s: number): number {
+  const u = clamp(s / CURVE_L, 0, 1);
+  return 0.3 + 0.34 * widen(u) + 0.14 * autoZone(s);
+}
+function autoBranchPoint(j: number, s: number, out: THREE.Vector3): THREE.Vector3 {
+  const f = frameAt(s);
+  const e = autoEmerge(s);
+  const indiv = 0.7 + 0.3 * Math.sin(s * 0.5 + j * 1.7);
+  const edge = ribbonHalfWAt(s) * 0.85;
+  const rad = edge + e * (AUTO_RMAX * indiv - edge);
+  const ang = AUTO_BASE_ANG[j] + AUTO_TWIST * e;
+  out.copy(f.pos).addScaledVector(f.right, Math.cos(ang) * rad).addScaledVector(f.up, Math.sin(ang) * rad);
+  return out;
+}
+function autoBranchCurve(j: number): { curve: THREE.CatmullRomCurve3; a: number; b: number } {
+  const a = AUTO_S0 - 6;
+  const b = AUTO_S1 + 6;
+  const pts: THREE.Vector3[] = [];
+  const M2 = 140;
+  for (let i = 0; i <= M2; i += 1) pts.push(autoBranchPoint(j, a + (i / M2) * (b - a), new THREE.Vector3()));
+  return { curve: new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5), a, b };
 }
 
 // illuminated silk: broad and luminous when its face turns toward you, thinning
@@ -225,12 +342,12 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, sheenCol: THREE.Colo
       uCore: { value: core }, uEdge: { value: edge }, uSheen: { value: sheenCol },
     },
     vertexShader: `
-      attribute float aBoost;
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth;
-      void main(){ vUv=uv; vBoost=aBoost; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
+      attribute float aBoost; attribute float aEmerge; attribute float aFlow;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth; varying float vEmerge; varying float vFlow;
+      void main(){ vUv=uv; vBoost=aBoost; vEmerge=aEmerge; vFlow=aFlow; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
       precision highp float;
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth; varying float vEmerge; varying float vFlow;
       uniform float uTime, uReveal, uAppear, uAlpha, uSoft; uniform vec3 uCore, uEdge, uSheen;
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
@@ -264,8 +381,16 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, sheenCol: THREE.Colo
         float haze = clamp(exp(-0.013 * vDepth), 0.0, 1.0);
         float lit = (0.10 + 0.24 * glow) * face * softEdge * shimmer * boost * ends * wipe * haze;
 
-        vec3 col = mix(uEdge, uCore, glow) + sheen * 0.3 * uSheen;
-        float a = (base + lit) * uReveal * uAlpha;
+        // information flowing — soft bands of light running the ribbon, but only
+        // through Automation (vFlow) where the systems come alive
+        float pv = fract(vUv.x * 3.0 - uTime * 0.16);
+        float pulse = smoothstep(0.0, 0.05, pv) * (1.0 - smoothstep(0.05, 0.16, pv));
+        lit += pulse * 0.5 * vFlow * softEdge * haze;
+
+        // branches appear only where they have peeled away from the ribbon's edge
+        float peel = smoothstep(0.03, 0.28, vEmerge);
+        vec3 col = mix(uEdge, uCore, glow) + sheen * 0.3 * uSheen + pulse * vFlow * 0.4 * uCore;
+        float a = (base + lit) * uReveal * uAlpha * peel;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -289,8 +414,9 @@ function ringMaterial(color: THREE.Color) {
 }
 
 function Ribbon({ shared }: { shared: Shared }) {
-  // thin, elegant — width breathes gently and swells only a little at a stop
-  const wMain = (u: number) => 0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u);
+  // thin, elegant — width breathes gently, swells a little at a stop, and
+  // expands as it gathers energy to split in Automation
+  const wMain = (u: number) => 0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u) + 0.14 * autoZone(u * CURVE_L);
   // a calmer roll now the tube keeps a visible edge even side-on
   const bodyGeo = useMemo(() => stripGeometry(wMain, 0.35, () => 0, 0.05), []);
   const haloGeo = useMemo(() => stripGeometry((u) => wMain(u) * 2.2 + 0.25, 0.35, () => 0, 0.06), []);
@@ -315,6 +441,73 @@ function Ribbon({ shared }: { shared: Shared }) {
       <mesh geometry={bodyGeo} material={body} renderOrder={2} />
       <mesh geometry={sA} material={thin} renderOrder={1} />
       <mesh geometry={sB} material={thin} renderOrder={1} />
+    </group>
+  );
+}
+
+/* ------------- the Automation transformation of the same ribbon ------------- */
+// four pathways of the SAME silk peel from the ribbon's edges, carry a
+// capability each, and merge back — a chapter of the sculpture, not a new one
+function AutoBranches({ shared }: { shared: Shared }) {
+  const bodies = useMemo(() => AUTO_LABELS.map((_, j) => { const { curve, a, b } = autoBranchCurve(j); return tubeAlong(curve, a, b, 0.17, 0.04); }), []);
+  const halos = useMemo(() => AUTO_LABELS.map((_, j) => { const { curve, a, b } = autoBranchCurve(j); return tubeAlong(curve, a, b, 0.4, 0.05); }), []);
+  const body = useMemo(() => silkMaterial(new THREE.Color(0.9, 0.94, 1.0), new THREE.Color(0.36, 0.5, 0.86), new THREE.Color(0.95, 0.92, 0.82), 0.82, 0.5), []);
+  const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), new THREE.Color(0.22, 0.34, 0.78), new THREE.Color(0.7, 0.8, 1.0), 0.14, 0.85), []);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const ap = shared.appear.current;
+    for (const m of [body, halo]) { m.uniforms.uTime.value = t; m.uniforms.uAppear.value = ap; }
+  });
+  return (
+    <group>
+      {halos.map((g, j) => <mesh key={`h${j}`} geometry={g} material={halo} renderOrder={1} />)}
+      {bodies.map((g, j) => <mesh key={`b${j}`} geometry={g} material={body} renderOrder={2} />)}
+      {AUTO_LABELS.map((_, j) => <AutoStation key={j} j={j} shared={shared} />)}
+    </group>
+  );
+}
+
+// each capability, billboarded to the camera and revealed only as the drone
+// draws level with its pathway — one at a time, discovered through the motion
+function AutoStation({ j, shared }: { j: number; shared: Shared }) {
+  const anchor = useMemo(() => {
+    const s = autoStationS(j);
+    const f = frameAt(s);
+    const p = autoBranchPoint(j, s, new THREE.Vector3());
+    const out = p.clone().sub(f.pos).normalize();
+    return p.clone().addScaledVector(out, 0.7);
+  }, [j]);
+  const billboard = useRef<THREE.Group>(null);
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const labelRef = useRef<any>(null);
+  const tickRef = useRef<any>(null);
+  const shown = useRef(0);
+  useFrame((state) => {
+    const s = shared.spos.current;
+    let nearest = 0; let best = 1e9;
+    for (let k = 0; k < NA; k += 1) { const d = Math.abs(autoStationS(k) - s); if (d < best) { best = d; nearest = k; } }
+    const r = autoStationReveal(s, j);
+    const target = j === nearest ? smoothstep(0.4, 0.85, r) * smoothstep(0.2, 0.6, shared.appear.current) : 0;
+    shown.current += (target - shown.current) * 0.12;
+    if (billboard.current) billboard.current.quaternion.copy(state.camera.quaternion);
+    for (const ref of [labelRef, tickRef]) {
+      const o = ref.current;
+      if (!o) continue;
+      if (!o.__init) { o.material.depthTest = false; o.material.depthWrite = false; o.renderOrder = 14; o.__init = true; }
+      if (Math.abs((o.__op ?? -1) - shown.current) > 0.02) { o.fillOpacity = shown.current; o.__op = shown.current; o.sync?.(); }
+    }
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  return (
+    <group ref={billboard} position={[anchor.x, anchor.y, anchor.z]}>
+      <Text ref={tickRef} font={FONT_BOLD} fontSize={0.16} color="#9db4de" anchorX="center" anchorY="middle"
+        letterSpacing={0.35} position={[0, 0.34, 0]} fillOpacity={0}>
+        {`0${j + 1}`}
+      </Text>
+      <Text ref={labelRef} font={FONT_BOLD} fontSize={0.42} color="#f5f8ff" anchorX="center" anchorY="middle"
+        textAlign="center" maxWidth={3.4} lineHeight={1.05} letterSpacing={-0.01} position={[0, -0.06, 0]} fillOpacity={0}>
+        {AUTO_LABELS[j]}
+      </Text>
     </group>
   );
 }
@@ -555,10 +748,13 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
 
     const f = frameAt(s);
     const ahead = frameAt(s + AHEAD);
-    // the travelling follow pose
+    // the travelling follow pose — the same drone eases back and rises through
+    // the Automation split to take in the pathways, then settles as they merge
+    const az = autoZone(s);
     const follow = f.pos.clone()
-      .add(f.right.clone().multiplyScalar(-0.9 + Math.sin(t * 0.12) * 0.25))
-      .add(f.up.clone().multiplyScalar(0.5 + Math.sin(t * 0.1) * 0.18));
+      .add(f.right.clone().multiplyScalar(-0.9 - 0.5 * az + Math.sin(t * 0.12) * 0.25))
+      .add(f.up.clone().multiplyScalar(0.5 + 2.6 * az + Math.sin(t * 0.1) * 0.18))
+      .add(f.fwd.clone().multiplyScalar(-4.5 * az));
     // the opening beauty pose — pulled back and raised, slowly drifting in
     const intro = f0.pos.clone()
       .add(f0.right.clone().multiplyScalar(-3.4 + Math.sin(t * 0.18) * 0.4))
@@ -633,6 +829,7 @@ export default function LightCorridorCanvas({
         {stage >= 1 && WHY_CARDS.map((_, i) => (
           <Installation key={i} i={i} shared={shared} />
         ))}
+        {stage >= 1 && <AutoBranches shared={shared} />}
       </Canvas>
     </div>
   );
