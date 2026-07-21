@@ -7,12 +7,14 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useLenis } from "@/components/providers/SmoothScrollProvider";
 
 /* ==================================================================== *
- * The final room — a quiet luxury gallery of questions. Each question is
- * a floating satin card in a dark, softly-lit space. As the visitor moves
- * through, one card at a time glides to the centre, straightens, and opens
- * its answer in calm typography; the others rest nearby as soft context.
- * Nothing spins, nothing rushes — the composure is the point. It is where
- * the journey resolves into confidence.
+ * The final room — a real 3D exhibition of questions. Every question is
+ * an object that already exists in world space, placed deliberately at
+ * its own distance, height and angle. The visitor doesn't scroll cards
+ * past a viewer; the CAMERA glides through the gallery, approaching each
+ * exhibit in turn while the others stand in the distance. The nearest
+ * piece turns gently to face you and opens its answer, then quietly
+ * returns to rest as you move on. It is where the journey resolves into
+ * calm confidence.
  * ==================================================================== */
 
 const N = FAQS.length;
@@ -24,6 +26,24 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+// Every card's deliberate place in the room — winding through depth, side to
+// side, up and down, each angled to face the path the camera walks. No grid,
+// no symmetry, no line.
+const CARDS = [
+  { z: -1000, x: -540, y: 40, ry: 27, rx: -2 },
+  { z: -2200, x: 560, y: -150, ry: -29, rx: 3 },
+  { z: -3400, x: -610, y: 150, ry: 28, rx: -3 },
+  { z: -4600, x: 500, y: -50, ry: -25, rx: 2 },
+  { z: -5800, x: -430, y: -180, ry: 22, rx: 4 },
+  { z: -7000, x: 640, y: 130, ry: -30, rx: -3 },
+  { z: -8200, x: -560, y: -30, ry: 26, rx: 2 },
+  { z: -9400, x: 470, y: 175, ry: -23, rx: 3 },
+];
+const CAM_START = 360;
+const CAM_END = CARDS[N - 1].z + 560; // rest facing the last exhibit
+const CAM_TRAVEL = CAM_START - CAM_END;
+const focusScroll = (i: number) => clamp01((CAM_START - (CARDS[i].z + 560)) / CAM_TRAVEL);
+
 export function Faq() {
   const reduced = useReducedMotion();
   const mobile = useIsMobile();
@@ -31,72 +51,76 @@ export function Faq() {
   return <FaqGallery />;
 }
 
-// where each card rests while it is not the centre of attention — a curated,
-// asymmetric scatter (never a grid), varied in side, height, depth and tilt
-const SPOTS = [
-  { x: -19, y: -7, s: 0.64, r: -5 },
-  { x: 21, y: 9, s: 0.6, r: 4 },
-  { x: -24, y: 13, s: 0.61, r: 6 },
-  { x: 17, y: -13, s: 0.63, r: -4 },
-  { x: -15, y: 15, s: 0.58, r: 5 },
-  { x: 24, y: -9, s: 0.6, r: -6 },
-  { x: -21, y: -15, s: 0.62, r: 4 },
-  { x: 18, y: 14, s: 0.6, r: -5 },
-];
-
 function FaqGallery() {
   const sectionRef = useRef<HTMLElement>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const ansRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const ambientRef = useRef<HTMLDivElement>(null);
   const { scrollTo } = useLenis();
+  const camX = useRef(0);
+  const camY = useRef(0);
 
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       const sect = sectionRef.current;
-      if (sect) {
+      const world = worldRef.current;
+      if (sect && world) {
         const vh = window.innerHeight;
-        const vw = window.innerWidth;
         const range = sect.offsetHeight - vh;
-        const pos = range > 0 ? clamp01(-sect.getBoundingClientRect().top / range) : 0;
-        const focus = pos * (N - 1);
+        const p = range > 0 ? clamp01(-sect.getBoundingClientRect().top / range) : 0;
         const t = performance.now() / 1000;
+        const camZ = CAM_START - p * CAM_TRAVEL;
+
+        // the camera eases toward whichever exhibit it is approaching, so it
+        // curves through the room and the composition keeps changing
+        let nearest = 0;
+        let best = Infinity;
+        for (let i = 0; i < N; i += 1) {
+          const rel = CARDS[i].z - camZ;
+          if (rel < -80) {
+            const dist = -rel;
+            if (dist < best) { best = dist; nearest = i; }
+          }
+        }
+        const approach = smoothstep(2600, 700, best);
+        const tgtX = CARDS[nearest].x * 0.28 * approach + Math.sin(t * 0.11) * 26;
+        const tgtY = CARDS[nearest].y * 0.16 * approach + Math.sin(t * 0.09) * 16;
+        camX.current += (tgtX - camX.current) * 0.05;
+        camY.current += (tgtY - camY.current) * 0.05;
+
+        world.style.transform = `translate3d(${(-camX.current).toFixed(1)}px, ${(-camY.current).toFixed(1)}px, ${(-camZ).toFixed(1)}px)`;
 
         for (let i = 0; i < N; i += 1) {
           const el = cardRefs.current[i];
           if (!el) continue;
-          const d = focus - i; // 0 at centre, >0 already passed, <0 upcoming
-          const ad = Math.abs(d);
-          const fo = clamp01(1 - ad); // focus weight, only near the centre
-          const gate = smoothstep(2.7, 1.15, ad); // a few neighbours, then nothing
-          // gentle, ever-present float — slow and small, never a spin
-          const floatY = Math.sin(t * 0.5 + i * 1.7) * 0.7 * (1 - fo * 0.6);
-          const floatR = Math.sin(t * 0.4 + i * 2.1) * 0.5 * (1 - fo);
-          // rest at the curated spot; glide to centre as it takes focus
-          const x = SPOTS[i].x * (1 - fo);
-          const y = SPOTS[i].y * (1 - fo) - d * 3.2 + floatY;
-          const scale = SPOTS[i].s + (0.94 - SPOTS[i].s) * fo;
-          const rot = SPOTS[i].r * (1 - fo) + floatR;
-          const op = (0.24 + 0.76 * fo) * gate;
-          const blur = (1 - fo) * 2.6 * gate;
-          const xpx = (x / 100) * vw;
-          const ypx = (y / 100) * vh;
-          el.style.transform = `translate3d(calc(-50% + ${xpx.toFixed(1)}px), calc(-50% + ${ypx.toFixed(1)}px), 0) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
+          const c = CARDS[i];
+          const rel = c.z - camZ; // <0 in front of the camera
+          const dist = -rel;
+          // it exists in the world: distant exhibits stay faintly visible; only
+          // pieces behind the camera or far past the room drop away
+          let op = 0;
+          if (rel < -70 && dist < 10500) {
+            op = 0.14 + 0.86 * smoothstep(4600, 720, dist);
+            op *= smoothstep(-70, -420, rel);        // ease out as it passes behind
+            op *= 1 - smoothstep(8600, 10200, dist); // ease out at the far wall
+          }
+          const near = smoothstep(1700, 540, dist);
+          // gentle life, and a subtle turn to face the viewer only when near
+          const floatY = Math.sin(t * 0.42 + i * 1.6) * 9 * (1 - near * 0.7);
+          const ryDyn = c.ry * (1 - 0.62 * near);
           el.style.opacity = op.toFixed(3);
-          el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "none";
-          el.style.zIndex = String(200 + Math.round(fo * 100) - Math.round(ad));
-          el.style.pointerEvents = fo > 0.4 ? "auto" : "none";
+          el.style.visibility = op < 0.004 ? "hidden" : "visible";
+          el.style.transform = `translate(-50%, -50%) translate3d(${c.x}px, ${(c.y + floatY).toFixed(1)}px, ${c.z}px) rotateY(${ryDyn.toFixed(2)}deg) rotateX(${c.rx}deg)`;
+          el.style.pointerEvents = i === nearest && near > 0.4 ? "auto" : "none";
+
           const ans = ansRefs.current[i];
           if (ans) {
-            const av = smoothstep(0.55, 0.92, fo);
+            const fo = i === nearest ? smoothstep(1500, 620, dist) : 0;
+            const av = smoothstep(0.5, 0.92, fo);
             ans.style.opacity = av.toFixed(3);
-            ans.style.maxHeight = `${(av * 42).toFixed(1)}vh`;
+            ans.style.maxHeight = `${(av * 44).toFixed(1)}vh`;
           }
-        }
-        if (ambientRef.current) {
-          // the soft ambient pool of light breathes very gently
-          ambientRef.current.style.opacity = (0.5 + 0.12 * Math.sin(t * 0.3)).toFixed(3);
         }
       }
       raf = requestAnimationFrame(tick);
@@ -109,7 +133,7 @@ function FaqGallery() {
     const sect = sectionRef.current;
     if (!sect) return;
     const range = sect.offsetHeight - window.innerHeight;
-    scrollTo(sect.offsetTop + (i / (N - 1)) * range, { duration: 1.4 });
+    scrollTo(sect.offsetTop + focusScroll(i) * range, { duration: 1.5 });
   };
 
   return (
@@ -117,62 +141,56 @@ function FaqGallery() {
       id="faq"
       ref={sectionRef}
       className="relative border-t border-line bg-ink"
-      style={{ height: `${N * 82 + 60}vh` }}
+      style={{ height: `${N * 92 + 80}vh` }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden">
-        {/* the gallery air — a deep charcoal wash, a soft pool of ambient light,
-            and a vignette that sinks the room into the dark at its edges */}
+      <div className="sticky top-0 h-screen overflow-hidden" style={{ perspective: "1500px", perspectiveOrigin: "50% 45%" }}>
+        {/* the gallery air — deep charcoal, a soft ambient pool of light, and a
+            vignette that sinks the room into the dark at its edges */}
         <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 42%, #0c0d11 0%, #070708 55%, #050506 100%)" }} />
-        <div
-          ref={ambientRef}
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2"
-          style={{ width: "120vh", height: "120vh", opacity: 0.5, background: "radial-gradient(circle, rgba(150,178,255,0.07) 0%, rgba(120,150,225,0.03) 34%, transparent 64%)" }}
-        />
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(130% 100% at 50% 44%, transparent 46%, rgba(0,0,0,0.86))" }} />
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-[45%] -translate-x-1/2 -translate-y-1/2" style={{ width: "130vh", height: "130vh", background: "radial-gradient(circle, rgba(150,178,255,0.06) 0%, rgba(120,150,225,0.025) 36%, transparent 66%)" }} />
 
-        {/* the quiet section label */}
+        {/* the exhibition — a world the camera travels through */}
+        <div ref={worldRef} className="absolute left-1/2 top-1/2 h-0 w-0" style={{ transformStyle: "preserve-3d", willChange: "transform" }}>
+          {FAQS.map((f, i) => (
+            <div
+              key={f.q}
+              ref={(el) => { cardRefs.current[i] = el; }}
+              onClick={() => goTo(i)}
+              data-cursor="hover"
+              className="absolute left-0 top-0 w-[33rem] max-w-[86vw] cursor-pointer rounded-[1.5rem] border border-white/10 px-10 py-9 will-change-transform"
+              style={{
+                opacity: 0,
+                transformStyle: "preserve-3d",
+                // a dark charcoal satin body with a faint top sheen — a designed
+                // object that reads cleanly over the depth behind it, not clear glass
+                background: "linear-gradient(152deg, rgba(32,35,45,0.72) 0%, rgba(17,19,25,0.6) 55%, rgba(25,28,38,0.68) 100%)",
+                boxShadow: "0 48px 100px -34px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.11), inset 0 0 46px rgba(120,150,225,0.035)",
+              }}
+            >
+              <div className="mb-5 flex items-center gap-4">
+                <span className="font-display text-xs font-semibold tracking-[0.3em] text-accent-bright">{two(i)}</span>
+                <span className="h-px flex-1 bg-white/10" />
+                <span className="text-[0.62rem] tracking-[0.3em] text-paper-faint">{String(N).padStart(2, "0")}</span>
+              </div>
+              <h3 className="font-display text-[clamp(1.5rem,2.1vw,2.15rem)] font-bold leading-[1.13] tracking-[-0.02em] text-paper">
+                {f.q}
+              </h3>
+              <div ref={(el) => { ansRefs.current[i] = el; }} className="overflow-hidden" style={{ opacity: 0, maxHeight: 0 }}>
+                <p className="mt-6 max-w-2xl text-[0.95rem] leading-relaxed text-paper-dim">{f.a}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* vignette + the quiet section label, in screen space over the room */}
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(135% 105% at 50% 46%, transparent 44%, rgba(0,0,0,0.9))" }} />
         <div className="pointer-events-none absolute inset-x-0 top-[7vh] flex flex-col items-center text-center">
           <div className="mb-4 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Common questions</span>
           </div>
-          <p className="text-eyebrow text-paper-faint">Drift through &darr;</p>
+          <p className="text-eyebrow text-paper-faint">Walk through &darr;</p>
         </div>
-
-        {/* the floating cards */}
-        {FAQS.map((f, i) => (
-          <div
-            key={f.q}
-            ref={(el) => { cardRefs.current[i] = el; }}
-            onClick={() => goTo(i)}
-            data-cursor="hover"
-            className="absolute left-1/2 top-[46%] w-[min(40rem,86vw)] cursor-pointer rounded-[1.5rem] border border-white/10 px-9 py-8 will-change-transform md:px-12 md:py-11"
-            style={{
-              opacity: 0,
-              background: "linear-gradient(152deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.018) 55%, rgba(255,255,255,0.035) 100%)",
-              boxShadow: "0 40px 90px -34px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 0 0 1px rgba(255,255,255,0.01)",
-              backdropFilter: "blur(7px)",
-              WebkitBackdropFilter: "blur(7px)",
-            }}
-          >
-            <div className="mb-5 flex items-center gap-4">
-              <span className="font-display text-xs font-semibold tracking-[0.3em] text-accent-bright">{two(i)}</span>
-              <span className="h-px flex-1 bg-white/10" />
-              <span className="text-[0.62rem] tracking-[0.3em] text-paper-faint">{String(N).padStart(2, "0")}</span>
-            </div>
-            <h3 className="font-display text-[clamp(1.45rem,2.5vw,2.3rem)] font-bold leading-[1.12] tracking-[-0.02em] text-paper">
-              {f.q}
-            </h3>
-            <div
-              ref={(el) => { ansRefs.current[i] = el; }}
-              className="overflow-hidden"
-              style={{ opacity: 0, maxHeight: 0 }}
-            >
-              <p className="mt-6 max-w-xl text-[0.97rem] leading-relaxed text-paper-dim">{f.a}</p>
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   );
