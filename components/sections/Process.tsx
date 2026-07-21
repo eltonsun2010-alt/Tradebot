@@ -39,8 +39,9 @@ export function Process() {
         const range = el.offsetHeight - window.innerHeight;
         const p = range > 0 ? clamp01(-el.getBoundingClientRect().top / range) : 0;
         if (titleRef.current) {
-          // it arrives centred (continuous with the ribbon) and settles precisely
-          titleRef.current.style.transform = `scale(${(1.04 - 0.04 * smoothstep(0, 0.3, p)).toFixed(3)})`;
+          // after the ribbon's dark pause, the chapter opens: PROCESS settles in
+          titleRef.current.style.opacity = smoothstep(0.02, 0.2, p).toFixed(3);
+          titleRef.current.style.transform = `scale(${(1.06 - 0.06 * smoothstep(0.02, 0.32, p)).toFixed(3)})`;
         }
         if (indexRef.current) indexRef.current.style.opacity = smoothstep(0.12, 0.34, p).toFixed(3);
         if (ruleRef.current) ruleRef.current.style.transform = `scaleX(${smoothstep(0.18, 0.56, p).toFixed(3)})`;
@@ -100,7 +101,7 @@ export function Process() {
           <h2
             ref={titleRef}
             className="whitespace-nowrap font-display text-[clamp(2.4rem,9vw,7rem)] font-extrabold leading-none tracking-[0.12em] text-paper"
-            style={{ transform: "scale(1.04)" }}
+            style={{ opacity: 0, transform: "scale(1.06)" }}
           >
             PROCESS
           </h2>
