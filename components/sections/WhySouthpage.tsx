@@ -44,7 +44,6 @@ function LightCorridor() {
   const introRef = useRef<HTMLDivElement>(null);
   const autoIntroRef = useRef<HTMLDivElement>(null);
   const autoOutroRef = useRef<HTMLDivElement>(null);
-  const finaleRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -65,15 +64,8 @@ function LightCorridor() {
         autoIntroRef.current.style.opacity = (smoothstep(0.55, 0.61, p) * (1 - smoothstep(0.65, 0.70, p))).toFixed(3);
       }
       if (autoOutroRef.current) {
-        // the resolution holds, then clears as the ribbon travels on and concludes
-        autoOutroRef.current.style.opacity = (smoothstep(0.86, 0.9, p) * (1 - smoothstep(0.915, 0.94, p))).toFixed(3);
-      }
-      // the ribbon concludes wordlessly: its last light gathers to a point, then
-      // dissolves into darkness — a visual pause, the transition between chapters
-      if (finaleRef.current) {
-        const bloom = smoothstep(0.92, 0.965, p) * (1 - smoothstep(0.98, 1.0, p));
-        finaleRef.current.style.opacity = (bloom * 0.95).toFixed(3);
-        finaleRef.current.style.transform = `translate(-50%, -50%) scale(${(1.7 - 1.15 * smoothstep(0.95, 1.0, p)).toFixed(3)})`;
+        // the resolution holds, then clears as the single ribbon begins its dive
+        autoOutroRef.current.style.opacity = (smoothstep(0.84, 0.88, p) * (1 - smoothstep(0.9, 0.93, p))).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -132,20 +124,6 @@ function LightCorridor() {
           </p>
         </div>
 
-        {/* the finale — the ribbon's last light gathers to a point, then
-            dissolves into darkness: a wordless visual pause between chapters */}
-        <div
-          ref={finaleRef}
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2"
-          style={{
-            opacity: 0,
-            transform: "translate(-50%, -50%) scale(1.6)",
-            width: "44vh",
-            height: "44vh",
-            background: "radial-gradient(circle, rgba(220,232,255,0.95) 0%, rgba(150,180,255,0.5) 14%, rgba(90,120,220,0.18) 34%, transparent 62%)",
-          }}
-        />
 
         {/* the same principles and capabilities, exposed to assistive tech (the
             3D lettering is decorative to a screen reader) */}
