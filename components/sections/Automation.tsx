@@ -68,7 +68,7 @@ function AutomationWeave() {
     <section
       id="automation"
       ref={sectionRef}
-      className="relative border-t border-line bg-ink"
+      className="relative bg-ink"
       style={{ height: "340vh" }}
     >
       <div className="sticky top-0 h-screen overflow-hidden bg-ink">

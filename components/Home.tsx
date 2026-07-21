@@ -31,8 +31,9 @@ export function Home() {
         <Hero play={loaded} />
         <Trust />
         <Services />
+        {/* the Why journey flows straight into Automation — one connected
+            scroll of the same ribbon of light, no break between them */}
         <WhySouthpage />
-        <Transition text="Good design attracts attention. Great systems keep your business moving." />
         <Automation />
         <Process />
         <Portfolio />
