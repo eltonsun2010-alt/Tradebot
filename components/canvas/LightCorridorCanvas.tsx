@@ -805,11 +805,13 @@ function FinalePoint({ shared }: { shared: Shared }) {
   useFrame(() => {
     const s = shared.spos.current;
     const fin = smoothstep(cameraMaxS - 24, cameraMaxS - 2, s);
+    // at the very end the point dissolves into darkness — the ribbon leaves the
+    // stage so the Process chapter can begin in its own language
+    const dissolve = smoothstep(cameraMaxS - 3.5, cameraMaxS - 0.5, s);
     if (sprite.current) {
-      // it blooms open, then draws in to a tight, precise point of light
       const bloom = Math.sin(Math.min(1, fin) * Math.PI);
-      sprite.current.scale.setScalar(0.3 + 2.4 * bloom + 0.5 * fin);
-      mat.opacity = fin * 0.95;
+      sprite.current.scale.setScalar((0.3 + 2.4 * bloom + 0.5 * fin) * (1 - 0.6 * dissolve));
+      mat.opacity = fin * 0.95 * (1 - dissolve);
     }
   });
   return <sprite ref={sprite} position={[pos.x, pos.y, pos.z]} material={mat} />;
