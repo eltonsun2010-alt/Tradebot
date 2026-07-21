@@ -18,6 +18,7 @@ const MARKERS = [
   { id: "services", label: "Services" },
   { id: "why", label: "The Light" },
   { id: "automation", label: "Automation" },
+  { id: "process", label: "Process" },
   { id: "portfolio", label: "Work" },
   { id: "pricing", label: "Pricing" },
   { id: "faq", label: "FAQ" },
