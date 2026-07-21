@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader } from "@/components/sections/Loader";
-import { Navbar } from "@/components/layout/Navbar";
+import { CinematicNav } from "@/components/layout/CinematicNav";
 import { Hero } from "@/components/sections/Hero";
 import { Trust } from "@/components/sections/Trust";
 import { Services } from "@/components/sections/Services";
@@ -25,7 +25,7 @@ export function Home() {
     <>
       {!loaded && <Loader onComplete={() => setLoaded(true)} />}
 
-      <Navbar />
+      <CinematicNav />
 
       <main>
         <Hero play={loaded} />
