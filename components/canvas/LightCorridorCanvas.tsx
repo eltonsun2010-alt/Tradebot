@@ -140,6 +140,9 @@ const HUES = [
   new THREE.Color(0.82, 0.9, 1.0),
 ];
 
+// spos = the ribbon's current arc-length; appear = the cinematic reveal (0→1)
+type Shared = { spos: { current: number }; appear: { current: number } };
+
 /* ------------------------- the glass ribbon ------------------------- */
 // swept lens cross-section → a ribbon with real width & thickness and proper
 // surface normals, so it catches light differently as it twists.
@@ -201,7 +204,8 @@ function glassMaterial() {
     uniforms: {
       uTime: { value: 0 },
       uReveal: { value: 1 },
-      uBody: { value: new THREE.Color(0.26, 0.4, 0.72) },
+      uAppear: { value: 1 },
+      uBody: { value: new THREE.Color(0.22, 0.36, 0.68) },
       uRim: { value: new THREE.Color(0.95, 0.98, 1.0) },
       uSheen: { value: new THREE.Color(1.0, 0.95, 0.86) },
     },
@@ -217,17 +221,28 @@ function glassMaterial() {
     fragmentShader: `
       precision highp float;
       varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      uniform float uTime, uReveal; uniform vec3 uBody, uRim, uSheen;
+      uniform float uTime, uReveal, uAppear; uniform vec3 uBody, uRim, uSheen;
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
-        float fres = pow(1.0 - abs(dot(N, V)), 2.4);
+        float ndv = abs(dot(N, V));
+        float fres = pow(1.0 - ndv, 2.4);
+        // a sheen and a soft reflected-environment gradient give the surface
+        // orientation-based highlights — the light lives inside the material
         vec3 L = normalize(vec3(0.35, 0.7, 0.55));
-        float sheen = pow(max(dot(N, L), 0.0), 3.5);
-        float band = 0.6 + 0.4 * sin(vUv.x * 34.0 - uTime * 1.7);
-        float slow = 0.8 + 0.2 * sin(vUv.x * 6.0 - uTime * 0.6);
+        float sheen = pow(max(dot(N, L), 0.0), 3.6);
+        vec3 R = reflect(-V, N);
+        float envu = clamp(R.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 env = mix(vec3(0.05, 0.08, 0.17), vec3(0.82, 0.9, 1.0), smoothstep(0.25, 0.96, envu));
+        // a slow internal light seen through the translucent body (detail kept)
+        float core = smoothstep(0.75, 0.0, abs(vUv.y - 0.5) * 2.0);
+        float band = 0.72 + 0.28 * sin(vUv.x * 22.0 - uTime * 1.3);
+        float slow = 0.82 + 0.18 * sin(vUv.x * 5.0 - uTime * 0.5);
         float ends = smoothstep(0.0, 0.03, vUv.x) * smoothstep(1.0, 0.965, vUv.x);
-        vec3 col = mix(uBody, uRim, fres) + sheen * 0.5 * uSheen;
-        float a = (0.24 + 0.62 * fres) * band * slow * ends * uReveal;
+        vec3 col = mix(uBody, uRim, fres) + sheen * 0.55 * uSheen + env * fres * 0.7 + core * 0.14 * uRim;
+        // the sculpture emerges from darkness, near end first
+        float wipe = 1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x);
+        wipe *= smoothstep(0.0, 0.22, uAppear);
+        float a = (0.26 + 0.6 * fres + core * 0.12) * band * slow * ends * uReveal * wipe;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -237,23 +252,24 @@ function glassMaterial() {
 function glowMaterial(color: THREE.Color, power: number, alpha: number) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    uniforms: { uTime: { value: 0 }, uCol: { value: color }, uPow: { value: power }, uA: { value: alpha } },
+    uniforms: { uTime: { value: 0 }, uCol: { value: color }, uPow: { value: power }, uA: { value: alpha }, uAppear: { value: 1 } },
     vertexShader: `
       varying vec3 vN; varying vec3 vV; varying vec2 vUv;
       void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
       precision highp float; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      uniform float uTime, uPow, uA; uniform vec3 uCol;
+      uniform float uTime, uPow, uA, uAppear; uniform vec3 uCol;
       void main(){
         float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPow);
-        float band = 0.7 + 0.3 * sin(vUv.x * 40.0 - uTime * 2.0);
+        float band = 0.72 + 0.28 * sin(vUv.x * 32.0 - uTime * 1.7);
         float ends = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.95, vUv.x);
-        gl_FragColor = vec4(uCol, fres * band * ends * uA);
+        float wipe = (1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x)) * smoothstep(0.0, 0.22, uAppear);
+        gl_FragColor = vec4(uCol, fres * band * ends * uA * wipe);
       }`,
   });
 }
 
-function Ribbon() {
+function Ribbon({ shared }: { shared: Shared }) {
   // width breathes and swells at each destination (widen & wrap)
   const wMain = (u: number) => 0.42 + 0.16 * Math.sin(u * 22 + 0.4) + 0.6 * widen(u);
   const bodyGeo = useMemo(() => tubeGeometry(wMain, 0.09, 0.55, () => 0, 12), []);
@@ -263,15 +279,17 @@ function Ribbon() {
   const sA = useMemo(() => tubeGeometry(() => 0.05, 0.05, 0.7, (u) => 0.9 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 6), []);
   const sB = useMemo(() => tubeGeometry(() => 0.045, 0.045, 0.8, (u) => -1.15 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 6), []);
   const body = useMemo(() => glassMaterial(), []);
-  const halo = useMemo(() => glowMaterial(new THREE.Color(0.5, 0.66, 1.0), 2.6, 0.22), []);
-  const core = useMemo(() => glowMaterial(new THREE.Color(0.95, 0.98, 1.0), 0.6, 0.7), []);
-  const thin = useMemo(() => glowMaterial(new THREE.Color(0.8, 0.9, 1.0), 1.4, 0.5), []);
+  const halo = useMemo(() => glowMaterial(new THREE.Color(0.46, 0.62, 1.0), 2.8, 0.2), []);
+  const core = useMemo(() => glowMaterial(new THREE.Color(0.9, 0.95, 1.0), 0.9, 0.42), []);
+  const thin = useMemo(() => glowMaterial(new THREE.Color(0.78, 0.88, 1.0), 1.6, 0.4), []);
+  const mats = [body, halo, core, thin];
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    body.uniforms.uTime.value = t;
-    halo.uniforms.uTime.value = t;
-    core.uniforms.uTime.value = t;
-    thin.uniforms.uTime.value = t;
+    const ap = shared.appear.current;
+    for (const m of mats) {
+      m.uniforms.uTime.value = t;
+      m.uniforms.uAppear.value = ap;
+    }
   });
   return (
     <group>
@@ -288,7 +306,7 @@ function Ribbon() {
 // dust that belongs to the ribbon — born near it and drifting behind for depth
 function Dust() {
   const geo = useMemo(() => {
-    const count = 900;
+    const count = 650;
     const pos = new Float32Array(count * 3);
     const siz = new Float32Array(count);
     const pha = new Float32Array(count);
@@ -337,11 +355,11 @@ function Dust() {
 /* --------------------- the service installations -------------------- */
 // the ribbon wraps a framing loop around the words; particles peel from its
 // edges and drift; the words emerge, then everything dissolves back.
-function Installation({ i, spos }: { i: number; spos: { current: number } }) {
+function Installation({ i, shared }: { i: number; shared: Shared }) {
   const card = WHY_CARDS[i];
   const f = useMemo(() => frameAt(stationS(i) + 4), [i]);
   const hue = HUES[i % HUES.length];
-  const count = 460;
+  const count = 360;
 
   // particles that peel off the ribbon near the station and drift away
   const geo = useMemo(() => {
@@ -414,7 +432,7 @@ function Installation({ i, spos }: { i: number; spos: { current: number } }) {
   const idxRef = useRef<any>(null);
   const bodyRef = useRef<any>(null);
   useFrame((state) => {
-    const r = revealAtS(spos.current, i);
+    const r = revealAtS(shared.spos.current, i);
     const t = state.clock.elapsedTime;
     mat.uniforms.uTime.value = t;
     mat.uniforms.uReveal.value = r;
@@ -430,7 +448,7 @@ function Installation({ i, spos }: { i: number; spos: { current: number } }) {
     let nearest = 0;
     let best = 1e9;
     for (let k = 0; k < N; k += 1) {
-      const d = Math.abs(stationS(k) - spos.current);
+      const d = Math.abs(stationS(k) - shared.spos.current);
       if (d < best) { best = d; nearest = k; }
     }
     const gv = i === nearest ? smoothstep(0.5, 0.86, r) : 0;
@@ -483,32 +501,53 @@ function Installation({ i, spos }: { i: number; spos: { current: number } }) {
 }
 
 /* ------------------------------ camera ------------------------------ */
-// a cinematic drone: it never leads, it follows the ribbon with soft inertia
-function Rig({ scroll, spos }: { scroll?: { get: () => number }; spos: { current: number } }) {
+// a cinematic drone: it never leads, it follows the ribbon with soft inertia.
+// It opens on a slow reveal — pulled back to take in the whole sculpture as it
+// emerges from black — then eases into the travelling follow as the flow begins.
+function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Shared }) {
   const { camera } = useThree();
   const eased = useRef(0);
-  const pos = useRef(new THREE.Vector3(0, 1, 4));
+  const t0 = useRef(-1);
+  const pos = useRef(new THREE.Vector3());
   const look = useRef(new THREE.Vector3());
   const smooth = useRef(new THREE.Vector3());
   const upv = useRef(new THREE.Vector3(0, 1, 0));
   const inited = useRef(false);
+  const f0 = useMemo(() => frameAt(6), []);
+  const introTgt = useMemo(() => frameAt(12), []);
   useFrame((state, delta) => {
+    const t = state.clock.elapsedTime;
+    if (t0.current < 0) t0.current = t;
     const target = scroll ? scroll.get() : 0;
     eased.current += (target - eased.current) * Math.min(1, delta * 1.1);
     const s = sArc(eased.current);
-    spos.current = s;
-    const t = state.clock.elapsedTime;
+    shared.spos.current = s;
+    // reveal completes on its own after a held beat, or the instant you scroll
+    const timeApp = smoothstep(0.25, 3.0, t - t0.current);
+    const scrolled = smoothstep(0.004, 0.03, eased.current);
+    const app = Math.max(timeApp, scrolled);
+    shared.appear.current = app;
+
     const f = frameAt(s);
     const ahead = frameAt(s + AHEAD);
-    // sit just off the ribbon so it flows beside us, breathing gently
-    const target3 = f.pos.clone()
+    // the travelling follow pose
+    const follow = f.pos.clone()
       .add(f.right.clone().multiplyScalar(-0.9 + Math.sin(t * 0.12) * 0.25))
       .add(f.up.clone().multiplyScalar(0.5 + Math.sin(t * 0.1) * 0.18));
-    // drone inertia: the camera trails its target rather than snapping to it
-    if (!inited.current) { pos.current.copy(target3); smooth.current.copy(ahead.pos); inited.current = true; }
-    pos.current.lerp(target3, Math.min(1, delta * 1.6));
+    // the opening beauty pose — pulled back and raised, slowly drifting in
+    const intro = f0.pos.clone()
+      .add(f0.right.clone().multiplyScalar(-3.4 + Math.sin(t * 0.18) * 0.4))
+      .add(f0.up.clone().multiplyScalar(2.1 + Math.sin(t * 0.14) * 0.2))
+      .add(f0.fwd.clone().multiplyScalar(-6.5));
+    const k = smoothstep(0.08, 1.0, app);
+    const camTarget = intro.clone().lerp(follow, k);
+    const lookTarget = introTgt.pos.clone().lerp(ahead.pos, k);
+
+    // drone inertia: the camera trails its target rather than snapping
+    if (!inited.current) { pos.current.copy(camTarget); smooth.current.copy(lookTarget); inited.current = true; }
+    pos.current.lerp(camTarget, Math.min(1, delta * 1.5));
     camera.position.copy(pos.current);
-    look.current.copy(ahead.pos);
+    look.current.copy(lookTarget);
     smooth.current.lerp(look.current, Math.min(1, delta * 1.6));
     upv.current.lerp(f.up.clone().multiplyScalar(0.28).add(new THREE.Vector3(0, 1, 0).multiplyScalar(0.72)).normalize(), Math.min(1, delta * 1.0));
     camera.up.copy(upv.current);
@@ -529,7 +568,10 @@ export default function LightCorridorCanvas({
   const mobile = useIsMobile();
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
-  const spos = useRef({ current: 0 }).current;
+  // progressive load: the sculpture appears instantly; the particles and the
+  // service installations fade in a beat later, so the first frame is light
+  const [stage, setStage] = useState(0);
+  const shared = useRef<Shared>({ spos: { current: 0 }, appear: { current: 0 } }).current;
 
   useEffect(() => {
     const el = ref.current;
@@ -539,6 +581,11 @@ export default function LightCorridorCanvas({
     return () => io.disconnect();
   }, []);
 
+  useEffect(() => {
+    const id = window.setTimeout(() => setStage(1), 900);
+    return () => window.clearTimeout(id);
+  }, []);
+
   const active = !reduced && visible;
 
   return (
@@ -546,7 +593,7 @@ export default function LightCorridorCanvas({
       <Canvas
         className="!absolute inset-0"
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-        dpr={reduced ? 1 : [1, mobile ? 1.4 : 2]}
+        dpr={reduced ? 1 : [1, mobile ? 1.3 : 1.8]}
         camera={{ position: [0, 1, 4], fov: 60 }}
         frameloop={active ? "always" : "never"}
         eventSource={eventSource as unknown as RefObject<HTMLElement>}
@@ -555,12 +602,12 @@ export default function LightCorridorCanvas({
           scene.fog = new THREE.FogExp2(0x02030a, 0.011);
         }}
       >
-        <Dust />
-        <Ribbon />
-        {WHY_CARDS.map((_, i) => (
-          <Installation key={i} i={i} spos={spos} />
+        <Ribbon shared={shared} />
+        <Rig scroll={scroll} shared={shared} />
+        {stage >= 1 && <Dust />}
+        {stage >= 1 && WHY_CARDS.map((_, i) => (
+          <Installation key={i} i={i} shared={shared} />
         ))}
-        <Rig scroll={scroll} spos={spos} />
       </Canvas>
     </div>
   );
