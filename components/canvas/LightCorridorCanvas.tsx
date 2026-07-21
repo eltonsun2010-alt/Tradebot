@@ -422,9 +422,11 @@ function ringMaterial(color: THREE.Color) {
 }
 
 function Ribbon({ shared }: { shared: Shared }) {
-  // thin, elegant — width breathes gently, swells a little at a stop, and
-  // expands as it gathers energy to split in Automation
-  const wMain = (u: number) => 0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u) + 0.14 * autoZone(u * CURVE_L);
+  // thin, elegant — width breathes gently, swells a little at a stop, expands as
+  // it gathers energy to split in Automation, and finally tapers to a fine
+  // thread as all of it distils toward a single point of light
+  const endThin = (u: number) => 0.32 + 0.68 * smoothstep(1.0, 0.9, u);
+  const wMain = (u: number) => (0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u) + 0.14 * autoZone(u * CURVE_L)) * endThin(u);
   // a calmer roll now the tube keeps a visible edge even side-on
   const bodyGeo = useMemo(() => stripGeometry(wMain, 0.35, () => 0, 0.05), []);
   const haloGeo = useMemo(() => stripGeometry((u) => wMain(u) * 2.2 + 0.25, 0.35, () => 0, 0.06), []);
@@ -760,10 +762,14 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
     // the travelling follow pose — the same drone eases back and rises through
     // the Automation split to take in the pathways, then settles as they merge
     const az = autoZone(s);
+    // the finale: as the journey distils to a point, the drone slides directly
+    // behind the ribbon and looks straight down it, so it converges dead centre
+    const fin = smoothstep(cameraMaxS - 26, cameraMaxS - 4, s);
+    const off = 1 - 0.92 * fin;
     const follow = f.pos.clone()
-      .add(f.right.clone().multiplyScalar(-0.9 - 0.5 * az + Math.sin(t * 0.12) * 0.25))
-      .add(f.up.clone().multiplyScalar(0.5 + 2.6 * az + Math.sin(t * 0.1) * 0.18))
-      .add(f.fwd.clone().multiplyScalar(-4.5 * az));
+      .add(f.right.clone().multiplyScalar((-0.9 - 0.5 * az) * off + Math.sin(t * 0.12) * 0.25 * off))
+      .add(f.up.clone().multiplyScalar((0.5 + 2.6 * az) * off + Math.sin(t * 0.1) * 0.18 * off))
+      .add(f.fwd.clone().multiplyScalar(-4.5 * az - 3.5 * fin));
     // the opening beauty pose — pulled back and raised, slowly drifting in
     const intro = f0.pos.clone()
       .add(f0.right.clone().multiplyScalar(-3.4 + Math.sin(t * 0.18) * 0.4))
@@ -784,6 +790,29 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
     camera.lookAt(smooth.current);
   });
   return null;
+}
+
+/* --------------------- the distilled point of light --------------------- */
+// at the very end all of the journey's energy gathers at the ribbon's tip into
+// a single concentrated point of light — the seed the Process chapter grows from
+function FinalePoint({ shared }: { shared: Shared }) {
+  const sprite = useRef<THREE.Sprite>(null);
+  const pos = useMemo(() => posAt(cameraMaxS - 0.4).clone(), []);
+  const mat = useMemo(
+    () => new THREE.SpriteMaterial({ map: GLOW ?? undefined, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, color: new THREE.Color(0.86, 0.91, 1.0) }),
+    [],
+  );
+  useFrame(() => {
+    const s = shared.spos.current;
+    const fin = smoothstep(cameraMaxS - 24, cameraMaxS - 2, s);
+    if (sprite.current) {
+      // it blooms open, then draws in to a tight, precise point of light
+      const bloom = Math.sin(Math.min(1, fin) * Math.PI);
+      sprite.current.scale.setScalar(0.3 + 2.4 * bloom + 0.5 * fin);
+      mat.opacity = fin * 0.95;
+    }
+  });
+  return <sprite ref={sprite} position={[pos.x, pos.y, pos.z]} material={mat} />;
 }
 
 export default function LightCorridorCanvas({
@@ -839,6 +868,7 @@ export default function LightCorridorCanvas({
           <Installation key={i} i={i} shared={shared} />
         ))}
         {stage >= 1 && <AutoBranches shared={shared} />}
+        {stage >= 1 && <FinalePoint shared={shared} />}
       </Canvas>
     </div>
   );

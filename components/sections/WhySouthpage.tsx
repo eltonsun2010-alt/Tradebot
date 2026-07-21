@@ -44,6 +44,7 @@ function LightCorridor() {
   const introRef = useRef<HTMLDivElement>(null);
   const autoIntroRef = useRef<HTMLDivElement>(null);
   const autoOutroRef = useRef<HTMLDivElement>(null);
+  const finaleRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -64,7 +65,15 @@ function LightCorridor() {
         autoIntroRef.current.style.opacity = (smoothstep(0.55, 0.61, p) * (1 - smoothstep(0.65, 0.70, p))).toFixed(3);
       }
       if (autoOutroRef.current) {
-        autoOutroRef.current.style.opacity = smoothstep(0.93, 0.98, p).toFixed(3);
+        // the resolution holds, then clears as the ribbon distils to a point
+        autoOutroRef.current.style.opacity = (smoothstep(0.9, 0.94, p) * (1 - smoothstep(0.965, 0.99, p))).toFixed(3);
+      }
+      if (finaleRef.current) {
+        // all the energy gathers to one concentrated point of light at centre
+        const f = smoothstep(0.965, 1.0, p);
+        finaleRef.current.style.opacity = f.toFixed(3);
+        // the halo draws in from a soft bloom to a tight point as it completes
+        finaleRef.current.style.transform = `translate(-50%, -50%) scale(${(1.6 - 0.85 * f).toFixed(3)})`;
       }
       raf = requestAnimationFrame(tick);
     };
@@ -122,6 +131,21 @@ function LightCorridor() {
             Complex systems become simple.
           </p>
         </div>
+
+        {/* the finale — the whole journey distilled into one point of light,
+            centred, held for a beat before it becomes the next chapter */}
+        <div
+          ref={finaleRef}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2"
+          style={{
+            opacity: 0,
+            transform: "translate(-50%, -50%) scale(1.6)",
+            width: "44vh",
+            height: "44vh",
+            background: "radial-gradient(circle, rgba(220,232,255,0.95) 0%, rgba(150,180,255,0.5) 14%, rgba(90,120,220,0.18) 34%, transparent 62%)",
+          }}
+        />
 
         {/* the same principles and capabilities, exposed to assistive tech (the
             3D lettering is decorative to a screen reader) */}
