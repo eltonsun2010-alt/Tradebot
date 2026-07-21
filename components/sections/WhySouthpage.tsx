@@ -45,6 +45,7 @@ function LightCorridor() {
   const autoIntroRef = useRef<HTMLDivElement>(null);
   const autoOutroRef = useRef<HTMLDivElement>(null);
   const finaleRef = useRef<HTMLDivElement>(null);
+  const deliverRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -65,15 +66,20 @@ function LightCorridor() {
         autoIntroRef.current.style.opacity = (smoothstep(0.55, 0.61, p) * (1 - smoothstep(0.65, 0.70, p))).toFixed(3);
       }
       if (autoOutroRef.current) {
-        // the resolution holds, then clears as the ribbon distils to a point
-        autoOutroRef.current.style.opacity = (smoothstep(0.9, 0.94, p) * (1 - smoothstep(0.965, 0.99, p))).toFixed(3);
+        // the resolution holds, then clears as the ribbon travels on to Process
+        autoOutroRef.current.style.opacity = (smoothstep(0.86, 0.9, p) * (1 - smoothstep(0.915, 0.94, p))).toFixed(3);
       }
+      // the ribbon delivers the visitor to the Process entrance: its last light
+      // gathers to a point that frames the heading, then dissolves into the dark
       if (finaleRef.current) {
-        // all the energy gathers to one concentrated point of light at centre
-        const f = smoothstep(0.965, 1.0, p);
-        finaleRef.current.style.opacity = f.toFixed(3);
-        // the halo draws in from a soft bloom to a tight point as it completes
-        finaleRef.current.style.transform = `translate(-50%, -50%) scale(${(1.6 - 0.85 * f).toFixed(3)})`;
+        const bloom = smoothstep(0.9, 0.95, p) * (1 - smoothstep(0.965, 0.995, p));
+        finaleRef.current.style.opacity = (bloom * 0.95).toFixed(3);
+        finaleRef.current.style.transform = `translate(-50%, -50%) scale(${(1.7 - 1.1 * smoothstep(0.93, 1.0, p)).toFixed(3)})`;
+      }
+      if (deliverRef.current) {
+        // PROCESS comes into view as the ribbon curves to acknowledge it, and
+        // holds as the ribbon leaves the stage — the entrance to the next chapter
+        deliverRef.current.style.opacity = smoothstep(0.95, 0.99, p).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -132,8 +138,8 @@ function LightCorridor() {
           </p>
         </div>
 
-        {/* the finale — the whole journey distilled into one point of light,
-            centred, held for a beat before it becomes the next chapter */}
+        {/* the finale — the ribbon's last light gathers to a point that frames
+            the Process heading, then dissolves into the dark as it leaves */}
         <div
           ref={finaleRef}
           aria-hidden
@@ -146,6 +152,17 @@ function LightCorridor() {
             background: "radial-gradient(circle, rgba(220,232,255,0.95) 0%, rgba(150,180,255,0.5) 14%, rgba(90,120,220,0.18) 34%, transparent 62%)",
           }}
         />
+
+        {/* the entrance to Process — delivered by the ribbon, held as it leaves */}
+        <div ref={deliverRef} className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center section-x" style={{ opacity: 0 }}>
+          <div className="mb-6 flex items-center gap-4">
+            <span className="h-px w-12 bg-accent" />
+            <span className="text-eyebrow text-paper-dim">Our process</span>
+          </div>
+          <h2 className="whitespace-nowrap font-display text-[clamp(2.4rem,9vw,7rem)] font-extrabold leading-none tracking-[0.12em] text-paper">
+            PROCESS
+          </h2>
+        </div>
 
         {/* the same principles and capabilities, exposed to assistive tech (the
             3D lettering is decorative to a screen reader) */}

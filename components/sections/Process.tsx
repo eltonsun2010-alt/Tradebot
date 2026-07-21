@@ -6,12 +6,12 @@ import { PROCESS } from "@/lib/data";
 import { useIsomorphicLayoutEffect } from "@/hooks/useIsomorphicLayoutEffect";
 
 /**
- * Process is the next chapter of the ribbon journey. It opens on the single
- * point of light the journey distilled into: that point blooms into the word
- * PROCESS and the opening lines emerge from it — inspiration resolving into
- * execution — with no hard cut. Then the section pins and its steps slide past
- * as a cinematic horizontal sequence (GSAP + ScrollTrigger, in sync with Lenis).
- * Below md — or with reduced motion — the panels simply stack into a column.
+ * Process is a new chapter. The ribbon has already delivered the visitor to its
+ * entrance and left the stage, so Process no longer speaks the ribbon's
+ * language: the PROCESS heading — handed over by the ribbon — settles into a
+ * structured, architectural composition (a drawn baseline, a step index, a
+ * confident statement) that says clarity and structure, then the steps slide
+ * past as a pinned horizontal sequence. Below md / reduced motion it stacks.
  */
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smoothstep = (a: number, b: number, x: number) => {
@@ -23,14 +23,14 @@ export function Process() {
   const threshold = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
-  const pointRef = useRef<HTMLDivElement>(null);
-  const eyebrowRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const ruleRef = useRef<HTMLDivElement>(null);
+  const indexRef = useRef<HTMLDivElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
+  const cueRef = useRef<HTMLDivElement>(null);
 
-  // The point-of-light → PROCESS reveal, driven from the threshold's real
-  // scrolled position (getBoundingClientRect), so it stays exact under Lenis
-  // smooth-scroll. The reveal completes early and then holds on PROCESS.
+  // The heading the ribbon delivered settles into structure — driven from the
+  // panel's real scrolled position so it stays exact under Lenis smooth-scroll.
   useEffect(() => {
     let raf = 0;
     const tick = () => {
@@ -38,24 +38,18 @@ export function Process() {
       if (el) {
         const range = el.offsetHeight - window.innerHeight;
         const p = range > 0 ? clamp01(-el.getBoundingClientRect().top / range) : 0;
-        if (pointRef.current) {
-          pointRef.current.style.opacity = (1 - smoothstep(0.14, 0.42, p)).toFixed(3);
-          pointRef.current.style.transform = `scale(${(0.5 + smoothstep(0, 0.46, p) * 1.5).toFixed(3)})`;
-        }
-        if (eyebrowRef.current) {
-          eyebrowRef.current.style.opacity = smoothstep(0.14, 0.3, p).toFixed(3);
-        }
         if (titleRef.current) {
-          titleRef.current.style.opacity = smoothstep(0.2, 0.38, p).toFixed(3);
-          const sc = 0.82 + 0.18 * smoothstep(0.2, 0.5, p);
-          titleRef.current.style.transform = `scale(${sc.toFixed(3)})`;
-          titleRef.current.style.letterSpacing = `${(0.42 - 0.3 * smoothstep(0.2, 0.56, p)).toFixed(3)}em`;
+          // it arrives centred (continuous with the ribbon) and settles precisely
+          titleRef.current.style.transform = `scale(${(1.04 - 0.04 * smoothstep(0, 0.3, p)).toFixed(3)})`;
         }
+        if (indexRef.current) indexRef.current.style.opacity = smoothstep(0.12, 0.34, p).toFixed(3);
+        if (ruleRef.current) ruleRef.current.style.transform = `scaleX(${smoothstep(0.18, 0.56, p).toFixed(3)})`;
         if (subRef.current) {
-          const s = smoothstep(0.4, 0.58, p);
+          const s = smoothstep(0.4, 0.64, p);
           subRef.current.style.opacity = s.toFixed(3);
-          subRef.current.style.transform = `translateY(${((1 - s) * 22).toFixed(1)}px)`;
+          subRef.current.style.transform = `translateY(${((1 - s) * 20).toFixed(1)}px)`;
         }
+        if (cueRef.current) cueRef.current.style.opacity = smoothstep(0.66, 0.86, p).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -94,65 +88,62 @@ export function Process() {
 
   return (
     <section id="process" className="relative bg-ink">
-      {/* the threshold — the distilled point of light becomes the next chapter */}
-      <div ref={threshold} className="relative h-[200vh]">
+      {/* the threshold — the delivered heading settles into a structured chapter */}
+      <div ref={threshold} className="relative h-[180vh]">
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden section-x text-center">
-          {/* a faint, steady glow behind the title — the ribbon's light, held */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 m-auto h-[38vh] w-[38vh] rounded-full opacity-40"
-            style={{ background: "radial-gradient(circle, rgba(150,180,255,0.28) 0%, rgba(90,120,220,0.1) 38%, transparent 66%)" }}
-          />
-          {/* the point of light, carried over from the end of the ribbon, blooming
-              open into the title then dissolving into it */}
-          <div
-            ref={pointRef}
-            aria-hidden
-            className="pointer-events-none absolute inset-0 m-auto h-[42vh] w-[42vh] rounded-full"
-            style={{
-              opacity: 1,
-              transform: "scale(0.5)",
-              background: "radial-gradient(circle, rgba(220,232,255,0.95) 0%, rgba(150,180,255,0.5) 14%, rgba(90,120,220,0.18) 34%, transparent 62%)",
-            }}
-          />
-
-          <div ref={eyebrowRef} className="relative mb-7 flex items-center gap-4" style={{ opacity: 0 }}>
+          <div className="mb-7 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Our process</span>
           </div>
 
-          {/* PROCESS — formed from the ribbon's energy */}
+          {/* PROCESS — handed over by the ribbon, now crisp and structural */}
           <h2
             ref={titleRef}
-            className="relative whitespace-nowrap font-display text-[clamp(2.4rem,9vw,7rem)] font-extrabold leading-none text-paper"
-            style={{ opacity: 0, transform: "scale(0.82)", letterSpacing: "0.42em" }}
+            className="whitespace-nowrap font-display text-[clamp(2.4rem,9vw,7rem)] font-extrabold leading-none tracking-[0.12em] text-paper"
+            style={{ transform: "scale(1.04)" }}
           >
             PROCESS
           </h2>
 
+          {/* a drawn baseline and a step index — the new chapter's structure */}
+          <div className="mt-9 flex w-[min(30rem,78vw)] flex-col items-center gap-3">
+            <div ref={ruleRef} className="h-px w-full origin-center bg-line-strong" style={{ transform: "scaleX(0)" }} />
+            <div ref={indexRef} className="flex w-full items-center justify-between text-eyebrow tabular-nums text-paper-faint" style={{ opacity: 0 }}>
+              <span>01</span>
+              <span>Six steps</span>
+              <span>0{PROCESS.length}</span>
+            </div>
+          </div>
+
           <p
             ref={subRef}
-            className="relative mt-10 max-w-md text-base leading-relaxed text-paper-dim md:text-lg"
-            style={{ opacity: 0, transform: "translateY(22px)" }}
+            className="mt-9 max-w-md text-base leading-relaxed text-paper-dim md:text-lg"
+            style={{ opacity: 0, transform: "translateY(20px)" }}
           >
             From inspiration into execution. Every project follows a clear,
             confident path — no confusion, no surprises, just a straightforward
             route to a website you&rsquo;re proud to launch.
           </p>
+
+          <div ref={cueRef} className="mt-12 hidden items-center gap-3 text-eyebrow text-paper-faint md:flex" style={{ opacity: 0 }}>
+            <span>Scroll</span>
+            <span className="h-px w-16 bg-line-strong" />
+            <span aria-hidden>&rarr;</span>
+          </div>
         </div>
       </div>
 
-      {/* the steps — a cinematic horizontal sequence that grows from the same point */}
-      <div ref={root} className="relative md:h-screen md:overflow-hidden">
+      {/* the steps — a structured horizontal sequence, the chapter's own language */}
+      <div ref={root} className="relative border-t border-line md:h-screen md:overflow-hidden">
         <div className="flex md:h-full md:items-center">
           <div
             ref={track}
             className="flex w-full flex-col gap-20 px-6 py-24 md:w-max md:flex-row md:items-center md:gap-0 md:px-0 md:py-0"
           >
             {/* a calm opening panel so the first step doesn't begin hard against the title */}
-            <div className="hidden shrink-0 md:flex md:h-full md:w-[26vw] md:items-center md:px-[6vw]">
+            <div className="hidden shrink-0 md:flex md:h-full md:w-[24vw] md:items-center md:px-[6vw]">
               <div className="flex items-center gap-3 text-eyebrow text-paper-faint">
-                <span>Six steps</span>
+                <span>The path</span>
                 <span className="h-px w-16 bg-line-strong" />
                 <span aria-hidden>&rarr;</span>
               </div>
