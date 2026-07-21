@@ -45,6 +45,7 @@ function LightCorridor() {
   const introRef = useRef<HTMLDivElement>(null);
   const autoIntroRef = useRef<HTMLDivElement>(null);
   const autoOutroRef = useRef<HTMLDivElement>(null);
+  const bridgeRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -68,6 +69,12 @@ function LightCorridor() {
       if (autoOutroRef.current) {
         // the resolution holds, then clears as the single ribbon begins its dive
         autoOutroRef.current.style.opacity = (smoothstep(0.84, 0.88, p) * (1 - smoothstep(0.9, 0.93, p))).toFixed(3);
+      }
+      // as the ribbon dives it reveals a soft ambient glow hidden in the dark —
+      // the space the next chapter will emerge from. It builds while the ribbon
+      // is still present (the ribbon illuminating it), and holds as it arrives.
+      if (bridgeRef.current) {
+        bridgeRef.current.style.opacity = smoothstep(0.86, 0.995, p).toFixed(3);
       }
 
       // The world lives in a FIXED layer that never unmounts or slides — so the
@@ -111,6 +118,21 @@ function LightCorridor() {
       <div ref={layerRef} className="pointer-events-none fixed inset-0 z-0 bg-ink" style={{ opacity: 0, visibility: "hidden" }}>
         {/* the living ribbon of light travelling the void */}
         <LightCorridorCanvas eventSource={sectionRef} scroll={scrollYProgress} active={active} count={N} />
+
+        {/* the bridge — a soft ambient glow the ribbon reveals in the dark, the
+            illuminated space the Process chapter gradually emerges from. Kept
+            low-contrast and diffuse so it reads as atmosphere, never bloom. */}
+        <div
+          ref={bridgeRef}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            opacity: 0,
+            width: "130vh",
+            height: "130vh",
+            background: "radial-gradient(circle, rgba(150,178,255,0.13) 0%, rgba(120,150,225,0.06) 30%, rgba(90,120,200,0.02) 48%, transparent 66%)",
+          }}
+        />
 
         {/* a deep vignette to sink the void into black at the frame edges */}
         <div

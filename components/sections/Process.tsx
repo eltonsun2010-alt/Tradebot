@@ -28,9 +28,12 @@ export function Process() {
   const indexRef = useRef<HTMLDivElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const eyebrowRef = useRef<HTMLDivElement>(null);
 
-  // The heading the ribbon delivered settles into structure — driven from the
-  // panel's real scrolled position so it stays exact under Lenis smooth-scroll.
+  // The heading the ribbon revealed emerges from the illuminated space and
+  // settles into structure — driven from the panel's real scrolled position so
+  // it stays exact under Lenis smooth-scroll.
   useEffect(() => {
     let raf = 0;
     const tick = () => {
@@ -38,19 +41,23 @@ export function Process() {
       if (el) {
         const range = el.offsetHeight - window.innerHeight;
         const p = range > 0 ? clamp01(-el.getBoundingClientRect().top / range) : 0;
+        // the soft glow is here first — the illuminated space — then PROCESS
+        // slowly fades up out of it rather than appearing as flat type
+        if (glowRef.current) glowRef.current.style.opacity = smoothstep(0.0, 0.28, p).toFixed(3);
+        if (eyebrowRef.current) eyebrowRef.current.style.opacity = smoothstep(0.08, 0.3, p).toFixed(3);
         if (titleRef.current) {
-          // after the ribbon's dark pause, the chapter opens: PROCESS settles in
-          titleRef.current.style.opacity = smoothstep(0.02, 0.2, p).toFixed(3);
-          titleRef.current.style.transform = `scale(${(1.06 - 0.06 * smoothstep(0.02, 0.32, p)).toFixed(3)})`;
+          // the word emerges gradually from the light, not instantly
+          titleRef.current.style.opacity = smoothstep(0.12, 0.46, p).toFixed(3);
+          titleRef.current.style.transform = `scale(${(1.06 - 0.06 * smoothstep(0.1, 0.44, p)).toFixed(3)})`;
         }
-        if (indexRef.current) indexRef.current.style.opacity = smoothstep(0.12, 0.34, p).toFixed(3);
-        if (ruleRef.current) ruleRef.current.style.transform = `scaleX(${smoothstep(0.18, 0.56, p).toFixed(3)})`;
+        if (indexRef.current) indexRef.current.style.opacity = smoothstep(0.34, 0.56, p).toFixed(3);
+        if (ruleRef.current) ruleRef.current.style.transform = `scaleX(${smoothstep(0.4, 0.66, p).toFixed(3)})`;
         if (subRef.current) {
-          const s = smoothstep(0.4, 0.64, p);
+          const s = smoothstep(0.54, 0.76, p);
           subRef.current.style.opacity = s.toFixed(3);
           subRef.current.style.transform = `translateY(${((1 - s) * 20).toFixed(1)}px)`;
         }
-        if (cueRef.current) cueRef.current.style.opacity = smoothstep(0.66, 0.86, p).toFixed(3);
+        if (cueRef.current) cueRef.current.style.opacity = smoothstep(0.78, 0.94, p).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -94,12 +101,26 @@ export function Process() {
       {/* the threshold — the delivered heading settles into a structured chapter */}
       <div ref={threshold} className="relative h-[180vh]">
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden section-x text-center">
-          <div className="mb-7 flex items-center gap-4">
+          {/* the illuminated space, continuous with the ribbon's bridge glow, so
+              PROCESS emerges from soft light — never flat type on black */}
+          <div
+            ref={glowRef}
+            aria-hidden
+            className="pointer-events-none absolute inset-0 m-auto"
+            style={{
+              opacity: 0,
+              width: "90vh",
+              height: "90vh",
+              background: "radial-gradient(circle, rgba(150,178,255,0.12) 0%, rgba(120,150,225,0.05) 34%, transparent 64%)",
+            }}
+          />
+
+          <div ref={eyebrowRef} className="mb-7 flex items-center gap-4" style={{ opacity: 0 }}>
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Our process</span>
           </div>
 
-          {/* PROCESS — handed over by the ribbon, now crisp and structural */}
+          {/* PROCESS — revealed by the ribbon, emerging from the illuminated space */}
           <h2
             ref={titleRef}
             className="whitespace-nowrap font-display text-[clamp(2.4rem,9vw,7rem)] font-extrabold leading-none tracking-[0.12em] text-paper"
