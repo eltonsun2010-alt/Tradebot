@@ -73,6 +73,15 @@ const revealAtS = (s: number, i: number) => smoothstep(11.5, 3.6, Math.abs(stati
 const autoZone = (s: number) => smoothstep(AUTO_S0 - 16, AUTO_S0, s) * smoothstep(AUTO_S1 + 16, AUTO_S1, s);
 const autoEmerge = (s: number) => smoothstep(AUTO_S0, AUTO_S0 + 14, s) * smoothstep(AUTO_S1, AUTO_S1 - 14, s);
 const autoStationReveal = (s: number, j: number) => smoothstep(8.5, 2.8, Math.abs(autoStationS(j) - s));
+// the finale dive: once merged, the single ribbon curves gracefully DOWNWARD and
+// accelerates into the space below, carrying the camera with it — the descent
+// becomes the scroll into the Process chapter
+const FINALE_S = 196;
+const FINALE_DROP = 20;
+function finaleDrop(s: number): number {
+  const t = smoothstep(FINALE_S, cameraMaxS, s);
+  return -FINALE_DROP * t * t; // accelerating downward curve, off the bottom
+}
 
 // how much the ribbon fattens as it nears each destination (the "widen & wrap")
 function widen(u: number): number {
@@ -188,6 +197,7 @@ function stripGeometry(
   for (let i = 0; i <= n; i += 1) {
     const u = i / n;
     const p = CURVE.getPointAt(u);
+    p.y += finaleDrop(u * CURVE_L); // the ribbon dives downward at the very end
     const T = CURVE.getTangentAt(u).normalize();
     let R = new THREE.Vector3().crossVectors(UP, T);
     if (R.lengthSq() < 1e-4) R.set(1, 0, 0);
@@ -261,6 +271,7 @@ function tubeAlong(curve: THREE.Curve<THREE.Vector3>, a: number, b: number, half
     const u = i / n;
     const s = a + u * (b - a);
     curve.getPoint(u, P);
+    P.y += finaleDrop(s); // follow the ribbon's downward dive at the finale
     curve.getTangent(u, T).normalize();
     let R = new THREE.Vector3().crossVectors(UP, T);
     if (R.lengthSq() < 1e-4) R.set(1, 0, 0);
@@ -762,14 +773,16 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
     // the travelling follow pose — the same drone eases back and rises through
     // the Automation split to take in the pathways, then settles as they merge
     const az = autoZone(s);
-    // the finale: as the journey distils to a point, the drone slides directly
-    // behind the ribbon and looks straight down it, so it converges dead centre
-    const fin = smoothstep(cameraMaxS - 26, cameraMaxS - 4, s);
-    const off = 1 - 0.92 * fin;
+    // the finale: the drone follows the ribbon into its downward dive. It trails
+    // the descent (only part of the drop) so the ribbon sinks toward the bottom
+    // of the frame and slips off below — the descent IS the scroll into Process.
+    const dive = smoothstep(cameraMaxS - 30, cameraMaxS - 2, s);
+    const off = 1 - 0.55 * dive;
     const follow = f.pos.clone()
       .add(f.right.clone().multiplyScalar((-0.9 - 0.5 * az) * off + Math.sin(t * 0.12) * 0.25 * off))
       .add(f.up.clone().multiplyScalar((0.5 + 2.6 * az) * off + Math.sin(t * 0.1) * 0.18 * off))
-      .add(f.fwd.clone().multiplyScalar(-4.5 * az - 3.5 * fin));
+      .add(f.fwd.clone().multiplyScalar(-4.5 * az - 2.0 * dive));
+    follow.y += finaleDrop(s) * 0.45; // the camera dives too, but lags the ribbon
     // the opening beauty pose — pulled back and raised, slowly drifting in
     const intro = f0.pos.clone()
       .add(f0.right.clone().multiplyScalar(-3.4 + Math.sin(t * 0.18) * 0.4))
@@ -777,7 +790,9 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
       .add(f0.fwd.clone().multiplyScalar(-6.5));
     const k = smoothstep(0.08, 1.0, app);
     const camTarget = intro.clone().lerp(follow, k);
-    const lookTarget = introTgt.pos.clone().lerp(ahead.pos, k);
+    const aheadDrop = ahead.pos.clone();
+    aheadDrop.y += finaleDrop(s + AHEAD); // look toward where the ribbon is diving
+    const lookTarget = introTgt.pos.clone().lerp(aheadDrop, k);
 
     // drone inertia: the camera trails its target rather than snapping
     if (!inited.current) { pos.current.copy(camTarget); smooth.current.copy(lookTarget); inited.current = true; }
@@ -790,31 +805,6 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
     camera.lookAt(smooth.current);
   });
   return null;
-}
-
-/* --------------------- the distilled point of light --------------------- */
-// at the very end all of the journey's energy gathers at the ribbon's tip into
-// a single concentrated point of light — the seed the Process chapter grows from
-function FinalePoint({ shared }: { shared: Shared }) {
-  const sprite = useRef<THREE.Sprite>(null);
-  const pos = useMemo(() => posAt(cameraMaxS - 0.4).clone(), []);
-  const mat = useMemo(
-    () => new THREE.SpriteMaterial({ map: GLOW ?? undefined, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, color: new THREE.Color(0.86, 0.91, 1.0) }),
-    [],
-  );
-  useFrame(() => {
-    const s = shared.spos.current;
-    const fin = smoothstep(cameraMaxS - 24, cameraMaxS - 2, s);
-    // at the very end the point dissolves into darkness — the ribbon leaves the
-    // stage so the Process chapter can begin in its own language
-    const dissolve = smoothstep(cameraMaxS - 3.5, cameraMaxS - 0.5, s);
-    if (sprite.current) {
-      const bloom = Math.sin(Math.min(1, fin) * Math.PI);
-      sprite.current.scale.setScalar((0.3 + 2.4 * bloom + 0.5 * fin) * (1 - 0.6 * dissolve));
-      mat.opacity = fin * 0.95 * (1 - dissolve);
-    }
-  });
-  return <sprite ref={sprite} position={[pos.x, pos.y, pos.z]} material={mat} />;
 }
 
 export default function LightCorridorCanvas({
@@ -870,7 +860,6 @@ export default function LightCorridorCanvas({
           <Installation key={i} i={i} shared={shared} />
         ))}
         {stage >= 1 && <AutoBranches shared={shared} />}
-        {stage >= 1 && <FinalePoint shared={shared} />}
       </Canvas>
     </div>
   );
