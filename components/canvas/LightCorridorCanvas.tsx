@@ -143,11 +143,12 @@ const HUES = [
 // spos = the ribbon's current arc-length; appear = the cinematic reveal (0→1)
 type Shared = { spos: { current: number }; appear: { current: number } };
 
-/* ------------------------- the glass ribbon ------------------------- */
-// swept lens cross-section → a ribbon with real width & thickness and proper
-// surface normals, so it catches light differently as it twists.
-function tubeGeometry(halfW: (u: number) => number, halfT: number, twistAmp: number, offset: (u: number) => number, K = 10): THREE.BufferGeometry {
-  const n = 340;
+/* --------------------- the ribbon of illuminated silk --------------------- */
+// a THIN flat band swept along the flow — a strip of silk, not a tube. Two
+// vertices per step; the face normal is the twisted "up" so the flat surface
+// catches light and turns edge-on to a fine line as it rolls.
+function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (u: number) => number): THREE.BufferGeometry {
+  const n = 380;
   const pos: number[] = [];
   const nor: number[] = [];
   const uv: number[] = [];
@@ -155,35 +156,25 @@ function tubeGeometry(halfW: (u: number) => number, halfT: number, twistAmp: num
   for (let i = 0; i <= n; i += 1) {
     const u = i / n;
     const p = CURVE.getPointAt(u);
-    // arc-length-consistent stable frame (right, up) around the tangent
     const T = CURVE.getTangentAt(u).normalize();
     let R = new THREE.Vector3().crossVectors(UP, T);
     if (R.lengthSq() < 1e-4) R.set(1, 0, 0);
     R.normalize();
     const Nr = new THREE.Vector3().crossVectors(T, R).normalize();
-    const tw = twistAmp * Math.sin(u * 18.0);
-    const b = R.clone().multiplyScalar(Math.cos(tw)).add(Nr.clone().multiplyScalar(Math.sin(tw))).normalize();
-    const nn = Nr.clone().multiplyScalar(Math.cos(tw)).add(R.clone().multiplyScalar(-Math.sin(tw))).normalize();
+    const tw = twistAmp * Math.sin(u * 16.0);
+    const w = R.clone().multiplyScalar(Math.cos(tw)).add(Nr.clone().multiplyScalar(Math.sin(tw))).normalize(); // width axis
+    const nrm = Nr.clone().multiplyScalar(Math.cos(tw)).add(R.clone().multiplyScalar(-Math.sin(tw))).normalize(); // flat-face normal
     const c = p.clone().add(Nr.clone().multiplyScalar(offset(u)));
     const hw = halfW(u);
-    for (let k = 0; k < K; k += 1) {
-      const a = (k / K) * Math.PI * 2;
-      const ca = Math.cos(a), sa = Math.sin(a);
-      const vp = c.clone().add(b.clone().multiplyScalar(ca * hw)).add(nn.clone().multiplyScalar(sa * halfT));
-      const nrm = b.clone().multiplyScalar(ca * halfT).add(nn.clone().multiplyScalar(sa * hw)).normalize();
-      pos.push(vp.x, vp.y, vp.z);
-      nor.push(nrm.x, nrm.y, nrm.z);
-      uv.push(u, k / K);
-    }
+    const l = c.clone().add(w.clone().multiplyScalar(-hw));
+    const r = c.clone().add(w.clone().multiplyScalar(hw));
+    pos.push(l.x, l.y, l.z, r.x, r.y, r.z);
+    nor.push(nrm.x, nrm.y, nrm.z, nrm.x, nrm.y, nrm.z);
+    uv.push(u, 0, u, 1);
   }
   for (let i = 0; i < n; i += 1) {
-    for (let k = 0; k < K; k += 1) {
-      const a = i * K + k;
-      const b2 = i * K + ((k + 1) % K);
-      const c2 = (i + 1) * K + k;
-      const d = (i + 1) * K + ((k + 1) % K);
-      idx.push(a, c2, b2, b2, c2, d);
-    }
+    const a = i * 2;
+    idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -193,96 +184,72 @@ function tubeGeometry(halfW: (u: number) => number, halfT: number, twistAmp: num
   return g;
 }
 
-// the translucent body — liquid-glass: fresnel rim, a sheen that shifts with
-// orientation, a slow band of inner light. Normal-blended, writes depth so it
-// reads as a solid object; the additive halo blooms only at its silhouette.
-function glassMaterial() {
+// illuminated silk: broad and luminous when its face turns toward you, thinning
+// to a fine line edge-on, with a satin highlight and a gentle internal glow
+// woven in and soft blooming edges. Light lives in the fabric — no glass.
+function silkMaterial(core: THREE.Color, edge: THREE.Color, sheenCol: THREE.Color, alpha: number, soft = 0.42) {
   return new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: true,
-    side: THREE.DoubleSide,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     uniforms: {
-      uTime: { value: 0 },
-      uReveal: { value: 1 },
-      uAppear: { value: 1 },
-      uBody: { value: new THREE.Color(0.22, 0.36, 0.68) },
-      uRim: { value: new THREE.Color(0.95, 0.98, 1.0) },
-      uSheen: { value: new THREE.Color(1.0, 0.95, 0.86) },
+      uTime: { value: 0 }, uReveal: { value: 1 }, uAppear: { value: 1 }, uAlpha: { value: alpha }, uSoft: { value: soft },
+      uCore: { value: core }, uEdge: { value: edge }, uSheen: { value: sheenCol },
     },
     vertexShader: `
       varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      void main(){
-        vUv = uv;
-        vN = normalize(normalMatrix * normal);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vV = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
-      }`,
+      void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
       precision highp float;
       varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      uniform float uTime, uReveal, uAppear; uniform vec3 uBody, uRim, uSheen;
+      uniform float uTime, uReveal, uAppear, uAlpha, uSoft; uniform vec3 uCore, uEdge, uSheen;
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
         float ndv = abs(dot(N, V));
-        float fres = pow(1.0 - ndv, 2.4);
-        // a sheen and a soft reflected-environment gradient give the surface
-        // orientation-based highlights — the light lives inside the material
-        vec3 L = normalize(vec3(0.35, 0.7, 0.55));
-        float sheen = pow(max(dot(N, L), 0.0), 3.6);
-        vec3 R = reflect(-V, N);
-        float envu = clamp(R.y * 0.5 + 0.5, 0.0, 1.0);
-        vec3 env = mix(vec3(0.05, 0.08, 0.17), vec3(0.82, 0.9, 1.0), smoothstep(0.25, 0.96, envu));
-        // a slow internal light seen through the translucent body (detail kept)
-        float core = smoothstep(0.75, 0.0, abs(vUv.y - 0.5) * 2.0);
-        float band = 0.72 + 0.28 * sin(vUv.x * 22.0 - uTime * 1.3);
-        float slow = 0.82 + 0.18 * sin(vUv.x * 5.0 - uTime * 0.5);
-        float ends = smoothstep(0.0, 0.03, vUv.x) * smoothstep(1.0, 0.965, vUv.x);
-        vec3 col = mix(uBody, uRim, fres) + sheen * 0.55 * uSheen + env * fres * 0.7 + core * 0.14 * uRim;
-        // the sculpture emerges from darkness, near end first
-        float wipe = 1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x);
-        wipe *= smoothstep(0.0, 0.22, uAppear);
-        float a = (0.26 + 0.6 * fres + core * 0.12) * band * slow * ends * uReveal * wipe;
+        // flat silk: luminous when its face is toward us, a fine line edge-on
+        float face = smoothstep(0.05, 0.8, ndv);
+        vec3 L = normalize(vec3(0.3, 0.75, 0.55));
+        float sheen = pow(abs(dot(N, L)), 2.2);            // soft satin highlight
+        float across = 1.0 - abs(vUv.y - 0.5) * 2.0;
+        float softEdge = smoothstep(0.0, uSoft, across);   // edges bloom softly
+        float glow = pow(clamp(across, 0.0, 1.0), 1.7);    // gentle internal glow
+        float shimmer = 0.82 + 0.18 * sin(vUv.x * 15.0 - uTime * 1.0);
+        float ends = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.955, vUv.x);
+        float wipe = (1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x)) * smoothstep(0.0, 0.22, uAppear);
+        vec3 col = mix(uEdge, uCore, glow) + sheen * 0.4 * uSheen;
+        float a = (0.28 + 0.55 * glow) * face * softEdge * shimmer * ends * wipe * uReveal * uAlpha;
         gl_FragColor = vec4(col, a);
       }`,
   });
 }
 
-// the additive halo/core around the body — soft silhouette bloom & inner spark
-function glowMaterial(color: THREE.Color, power: number, alpha: number) {
+// a soft additive glow for the framing loop — a fine bright ring, not a tube
+function ringMaterial(color: THREE.Color) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    uniforms: { uTime: { value: 0 }, uCol: { value: color }, uPow: { value: power }, uA: { value: alpha }, uAppear: { value: 1 } },
+    uniforms: { uTime: { value: 0 }, uCol: { value: color }, uReveal: { value: 0 } },
     vertexShader: `
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+      varying vec3 vN; varying vec3 vV;
+      void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
-      precision highp float; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      uniform float uTime, uPow, uA, uAppear; uniform vec3 uCol;
+      precision highp float; varying vec3 vN; varying vec3 vV; uniform vec3 uCol; uniform float uReveal;
       void main(){
-        float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPow);
-        float band = 0.72 + 0.28 * sin(vUv.x * 32.0 - uTime * 1.7);
-        float ends = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.95, vUv.x);
-        float wipe = (1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x)) * smoothstep(0.0, 0.22, uAppear);
-        gl_FragColor = vec4(uCol, fres * band * ends * uA * wipe);
+        float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.3);
+        gl_FragColor = vec4(uCol, rim * uReveal * 0.6);
       }`,
   });
 }
 
 function Ribbon({ shared }: { shared: Shared }) {
-  // width breathes and swells at each destination (widen & wrap)
-  const wMain = (u: number) => 0.42 + 0.16 * Math.sin(u * 22 + 0.4) + 0.6 * widen(u);
-  const bodyGeo = useMemo(() => tubeGeometry(wMain, 0.09, 0.55, () => 0, 12), []);
-  const haloGeo = useMemo(() => tubeGeometry((u) => wMain(u) * 1.9 + 0.5, 0.24, 0.4, () => 0, 10), []);
-  const coreGeo = useMemo(() => tubeGeometry(() => 0.05, 0.05, 0.6, () => 0, 6), []);
-  // companion strands that part and rejoin
-  const sA = useMemo(() => tubeGeometry(() => 0.05, 0.05, 0.7, (u) => 0.9 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 6), []);
-  const sB = useMemo(() => tubeGeometry(() => 0.045, 0.045, 0.8, (u) => -1.15 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u), 6), []);
-  const body = useMemo(() => glassMaterial(), []);
-  const halo = useMemo(() => glowMaterial(new THREE.Color(0.46, 0.62, 1.0), 2.8, 0.2), []);
-  const core = useMemo(() => glowMaterial(new THREE.Color(0.9, 0.95, 1.0), 0.9, 0.42), []);
-  const thin = useMemo(() => glowMaterial(new THREE.Color(0.78, 0.88, 1.0), 1.6, 0.4), []);
-  const mats = [body, halo, core, thin];
+  // thin, elegant — width breathes gently and swells only a little at a stop
+  const wMain = (u: number) => 0.3 + 0.08 * Math.sin(u * 20 + 0.4) + 0.34 * widen(u);
+  const bodyGeo = useMemo(() => stripGeometry(wMain, 0.9, () => 0), []);
+  const haloGeo = useMemo(() => stripGeometry((u) => wMain(u) * 2.2 + 0.25, 0.9, () => 0), []);
+  // companion silks that part and rejoin
+  const sA = useMemo(() => stripGeometry(() => 0.09, 1.0, (u) => 0.7 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
+  const sB = useMemo(() => stripGeometry(() => 0.08, 1.1, (u) => -0.9 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
+  const body = useMemo(() => silkMaterial(new THREE.Color(0.96, 0.98, 1.0), new THREE.Color(0.52, 0.66, 0.98), new THREE.Color(1.0, 0.96, 0.86), 0.95, 0.42), []);
+  const halo = useMemo(() => silkMaterial(new THREE.Color(0.7, 0.82, 1.0), new THREE.Color(0.3, 0.45, 0.9), new THREE.Color(0.8, 0.88, 1.0), 0.28, 0.85), []);
+  const thin = useMemo(() => silkMaterial(new THREE.Color(0.85, 0.92, 1.0), new THREE.Color(0.45, 0.6, 0.95), new THREE.Color(0.9, 0.94, 1.0), 0.5, 0.6), []);
+  const mats = [body, halo, thin];
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const ap = shared.appear.current;
@@ -293,11 +260,10 @@ function Ribbon({ shared }: { shared: Shared }) {
   });
   return (
     <group>
-      <mesh geometry={bodyGeo} material={body} renderOrder={1} />
-      <mesh geometry={haloGeo} material={halo} renderOrder={2} />
-      <mesh geometry={coreGeo} material={core} renderOrder={3} />
-      <mesh geometry={sA} material={thin} renderOrder={2} />
-      <mesh geometry={sB} material={thin} renderOrder={2} />
+      <mesh geometry={haloGeo} material={halo} renderOrder={1} />
+      <mesh geometry={bodyGeo} material={body} renderOrder={2} />
+      <mesh geometry={sA} material={thin} renderOrder={1} />
+      <mesh geometry={sB} material={thin} renderOrder={1} />
     </group>
   );
 }
@@ -415,14 +381,9 @@ function Installation({ i, shared }: { i: number; shared: Shared }) {
     [hue],
   );
 
-  // the framing loop — a glass ring of the ribbon wrapping the typography
-  const ringGeo = useMemo(() => new THREE.TorusGeometry(2.75, 0.1, 10, 64), []);
-  const ringMat = useMemo(() => {
-    const m = glassMaterial();
-    (m.uniforms.uBody.value as THREE.Color).copy(hue).multiplyScalar(0.7);
-    m.depthWrite = false;
-    return m;
-  }, [hue]);
+  // the framing loop — a fine ring of light wrapping the typography
+  const ringGeo = useMemo(() => new THREE.TorusGeometry(2.75, 0.05, 8, 72), []);
+  const ringMat = useMemo(() => ringMaterial(hue.clone()), [hue]);
   const ring = useRef<THREE.Mesh>(null);
 
   const grp = useRef<THREE.Group>(null);
@@ -436,7 +397,6 @@ function Installation({ i, shared }: { i: number; shared: Shared }) {
     const t = state.clock.elapsedTime;
     mat.uniforms.uTime.value = t;
     mat.uniforms.uReveal.value = r;
-    ringMat.uniforms.uTime.value = t;
     if (grp.current) grp.current.rotation.z = t * 0.045 + i;
     if (ring.current) {
       ring.current.scale.setScalar(0.55 + 0.45 * r);
