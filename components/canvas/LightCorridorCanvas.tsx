@@ -268,28 +268,42 @@ function Ribbon({ shared }: { shared: Shared }) {
   );
 }
 
-/* ----------------------- ambient light dust ------------------------ */
-// dust that belongs to the ribbon — born near it and drifting behind for depth
-function Dust() {
+/* --------------------- fragments of the ribbon --------------------- */
+// not a particle field — a small number of light fragments that peel from the
+// ribbon's edges, drift with momentum, fade into the dark, and recycle back.
+// Everything belongs to the ribbon; nothing floats at random.
+function RibbonSparks() {
   const geo = useMemo(() => {
-    const count = 650;
-    const pos = new Float32Array(count * 3);
+    const count = 200;
+    const start = new Float32Array(count * 3);
+    const drift = new Float32Array(count * 3);
     const siz = new Float32Array(count);
     const pha = new Float32Array(count);
+    const spd = new Float32Array(count);
     for (let i = 0; i < count; i += 1) {
-      const s = Math.random() * CURVE_L;
-      const f = frameAt(s);
-      const r = 0.8 + Math.random() * 14;
-      const a = Math.random() * Math.PI * 2;
-      const p = f.pos.clone().add(f.right.clone().multiplyScalar(Math.cos(a) * r)).add(f.up.clone().multiplyScalar(Math.sin(a) * r)).add(f.fwd.clone().multiplyScalar(-Math.random() * 4));
-      pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z;
-      siz[i] = 0.4 + Math.random() * 1.4;
-      pha[i] = Math.random() * Math.PI * 2;
+      const u = 0.02 + Math.random() * 0.96;
+      const f = frameAt(u * CURVE_L);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      // born just off an edge of the ribbon
+      const edge = f.pos.clone()
+        .add(f.right.clone().multiplyScalar(side * (0.26 + Math.random() * 0.14)))
+        .add(f.up.clone().multiplyScalar((Math.random() - 0.5) * 0.18));
+      // drift: gently outward and a little downstream, with momentum
+      const d = f.right.clone().multiplyScalar(side * (0.5 + Math.random() * 1.5))
+        .add(f.up.clone().multiplyScalar((Math.random() - 0.35) * 1.1))
+        .add(f.fwd.clone().multiplyScalar((Math.random() - 0.5) * 1.6));
+      start[i * 3] = edge.x; start[i * 3 + 1] = edge.y; start[i * 3 + 2] = edge.z;
+      drift[i * 3] = d.x; drift[i * 3 + 1] = d.y; drift[i * 3 + 2] = d.z;
+      siz[i] = 0.35 + Math.random() * 0.7;
+      pha[i] = Math.random();
+      spd[i] = 0.6 + Math.random() * 0.7;
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("position", new THREE.Float32BufferAttribute(start, 3));
+    g.setAttribute("aDrift", new THREE.Float32BufferAttribute(drift, 3));
     g.setAttribute("aSize", new THREE.Float32BufferAttribute(siz, 1));
     g.setAttribute("aPhase", new THREE.Float32BufferAttribute(pha, 1));
+    g.setAttribute("aSpeed", new THREE.Float32BufferAttribute(spd, 1));
     return g;
   }, []);
   const mat = useMemo(
@@ -298,19 +312,21 @@ function Dust() {
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
         uniforms: { uTime: { value: 0 }, uTex: { value: GLOW } },
         vertexShader: `
-          attribute float aSize; attribute float aPhase; uniform float uTime; varying float vTw;
+          attribute vec3 aDrift; attribute float aSize; attribute float aPhase; attribute float aSpeed;
+          uniform float uTime; varying float vA;
           void main(){
-            vec3 p = position;
-            p.y += sin(uTime * 0.1 + aPhase) * 0.5;
-            p.x += cos(uTime * 0.08 + aPhase) * 0.4;
-            vTw = 0.5 + 0.5 * sin(uTime * 0.4 + aPhase);
+            float life = fract(uTime * 0.05 * aSpeed + aPhase);   // slow release cycle
+            float e = 1.0 - pow(1.0 - life, 1.8);                 // ease out with momentum
+            vec3 p = position + aDrift * e;
+            // peel in softly, then dissolve into darkness
+            vA = smoothstep(0.0, 0.14, life) * (1.0 - smoothstep(0.45, 1.0, life));
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = aSize * (150.0 / -mv.z);
+            gl_PointSize = aSize * (1.0 - 0.35 * life) * (170.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }`,
         fragmentShader: `
-          uniform sampler2D uTex; varying float vTw;
-          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(vec3(0.66,0.78,1.0), t.a * vTw * 0.24); }`,
+          uniform sampler2D uTex; varying float vA;
+          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(vec3(0.82,0.9,1.0), t.a * vA * 0.4); }`,
       }),
     [],
   );
@@ -325,58 +341,56 @@ function Installation({ i, shared }: { i: number; shared: Shared }) {
   const card = WHY_CARDS[i];
   const f = useMemo(() => frameAt(stationS(i) + 4), [i]);
   const hue = HUES[i % HUES.length];
-  const count = 360;
+  const count = 110;
 
-  // particles that peel off the ribbon near the station and drift away
+  // as the flow arrives, a few fragments peel off the ribbon and drift outward,
+  // then dissolve back — a gentle emission, never a halo ringing the circle
   const geo = useMemo(() => {
-    const form = new Float32Array(count * 3);
-    const scatter = new Float32Array(count * 3);
+    const on = new Float32Array(count * 3);
+    const drift = new Float32Array(count * 3);
     const siz = new Float32Array(count);
     const pha = new Float32Array(count);
     for (let j = 0; j < count; j += 1) {
-      // gathered: a soft halo just outside the framing loop
-      const a = (j / count) * Math.PI * 2 * 2;
-      const rr = 2.7 + Math.random() * 1.4;
-      const fp = f.pos.clone()
-        .add(f.right.clone().multiplyScalar(Math.cos(a) * rr))
-        .add(f.up.clone().multiplyScalar(Math.sin(a) * rr))
-        .add(f.fwd.clone().multiplyScalar((Math.random() - 0.5) * 1.2));
-      form[j * 3] = fp.x; form[j * 3 + 1] = fp.y; form[j * 3 + 2] = fp.z;
-      // peeled state: on the ribbon itself, a touch off its edge
-      const s2 = stationS(i) + 4 + (Math.random() - 0.5) * 6;
-      const g2 = frameAt(s2);
-      const edge = g2.pos.clone().add(g2.right.clone().multiplyScalar((Math.random() - 0.5) * 1.0)).add(g2.up.clone().multiplyScalar((Math.random() - 0.5) * 0.5));
-      scatter[j * 3] = edge.x; scatter[j * 3 + 1] = edge.y; scatter[j * 3 + 2] = edge.z;
-      siz[j] = 0.4 + Math.random() * 1.1;
+      const g2 = frameAt(stationS(i) + 4 + (Math.random() - 0.5) * 8);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const edge = g2.pos.clone()
+        .add(g2.right.clone().multiplyScalar(side * (0.24 + Math.random() * 0.16)))
+        .add(g2.up.clone().multiplyScalar((Math.random() - 0.5) * 0.3));
+      on[j * 3] = edge.x; on[j * 3 + 1] = edge.y; on[j * 3 + 2] = edge.z;
+      const d = g2.right.clone().multiplyScalar(side * (0.7 + Math.random() * 1.8))
+        .add(g2.up.clone().multiplyScalar((Math.random() - 0.3) * 1.4))
+        .add(g2.fwd.clone().multiplyScalar((Math.random() - 0.5) * 2.2));
+      drift[j * 3] = d.x; drift[j * 3 + 1] = d.y; drift[j * 3 + 2] = d.z;
+      siz[j] = 0.35 + Math.random() * 0.85;
       pha[j] = Math.random() * Math.PI * 2;
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(form, 3));
-    g.setAttribute("aScatter", new THREE.Float32BufferAttribute(scatter, 3));
+    g.setAttribute("position", new THREE.Float32BufferAttribute(on, 3));
+    g.setAttribute("aDrift", new THREE.Float32BufferAttribute(drift, 3));
     g.setAttribute("aSize", new THREE.Float32BufferAttribute(siz, 1));
     g.setAttribute("aPhase", new THREE.Float32BufferAttribute(pha, 1));
     return g;
-  }, [i, f]);
+  }, [i]);
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
         uniforms: { uTime: { value: 0 }, uReveal: { value: 0 }, uTex: { value: GLOW }, uColor: { value: hue } },
         vertexShader: `
-          attribute vec3 aScatter; attribute float aSize; attribute float aPhase;
+          attribute vec3 aDrift; attribute float aSize; attribute float aPhase;
           uniform float uTime, uReveal; varying float vA;
           void main(){
             float r = smoothstep(0.0, 1.0, uReveal);
-            vec3 p = mix(aScatter, position, r);
-            p += (0.1 + 0.5 * (1.0 - r)) * sin(uTime * 0.6 + aPhase) * vec3(1.0, 0.9, 1.1);
+            float flow = 0.5 + 0.5 * sin(uTime * 0.5 + aPhase);   // gentle, alive
+            vec3 p = position + aDrift * (r * (0.45 + 0.55 * flow));
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = aSize * (0.5 + 0.5 * r) * (200.0 / -mv.z);
+            gl_PointSize = aSize * (0.5 + 0.5 * r) * (190.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
-            vA = r;
+            vA = r * (0.55 + 0.45 * flow);
           }`,
         fragmentShader: `
           uniform sampler2D uTex; uniform vec3 uColor; varying float vA;
-          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(uColor, t.a * vA * 0.5); }`,
+          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(uColor, t.a * vA * 0.42); }`,
       }),
     [hue],
   );
@@ -564,7 +578,7 @@ export default function LightCorridorCanvas({
       >
         <Ribbon shared={shared} />
         <Rig scroll={scroll} shared={shared} />
-        {stage >= 1 && <Dust />}
+        {stage >= 1 && <RibbonSparks />}
         {stage >= 1 && WHY_CARDS.map((_, i) => (
           <Installation key={i} i={i} shared={shared} />
         ))}
