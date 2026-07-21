@@ -66,26 +66,26 @@ function LightCorridor() {
       style={{ height: `${N * 128 + 120}vh` }}
     >
       <div className="sticky top-0 h-screen overflow-hidden bg-ink">
-        {/* the architecture — and, built into it, the exhibits themselves */}
+        {/* the living ribbon of light travelling the void */}
         <LightCorridorCanvas eventSource={sectionRef} scroll={scrollYProgress} count={N} />
 
-        {/* a deep vignette to seat the room in shadow at the frame edges */}
+        {/* a deep vignette to sink the void into black at the frame edges */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(130% 100% at 50% 42%, transparent 46%, rgba(0,0,0,0.82))" }}
+          style={{ background: "radial-gradient(135% 100% at 50% 45%, transparent 52%, rgba(0,0,0,0.9))" }}
         />
 
-        {/* the entrance — the only overlay, and it clears as you step inside */}
+        {/* the entrance — the only overlay, and it dissolves as the light carries you in */}
         <div ref={introRef} className="pointer-events-none absolute inset-x-0 top-[24vh] flex flex-col items-center text-center section-x">
           <div className="mb-6 flex items-center gap-4">
             <span className="h-px w-12 bg-accent" />
             <span className="text-eyebrow text-paper-dim">Why choose Southpage</span>
           </div>
           <h2 className="max-w-2xl font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-extrabold leading-[1.04] tracking-[-0.025em] text-paper">
-            Built with intention.
+            Follow the light.
           </h2>
-          <p className="mt-7 text-eyebrow text-paper-faint">Walk through &darr;</p>
+          <p className="mt-7 text-eyebrow text-paper-faint">Scroll to drift &darr;</p>
         </div>
 
         {/* the same principles, exposed to assistive tech (the 3D lettering is
