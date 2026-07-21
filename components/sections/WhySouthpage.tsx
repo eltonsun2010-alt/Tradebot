@@ -35,9 +35,15 @@ const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+// The four automation capabilities, exposed to assistive tech (the in-scene
+// lettering is decorative to a screen reader).
+const AUTO_CAPS = ["Workflow Automation", "AI Assistants", "Business Integrations", "Customer Systems"];
+
 function LightCorridor() {
   const sectionRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
+  const autoIntroRef = useRef<HTMLDivElement>(null);
+  const autoOutroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -48,9 +54,17 @@ function LightCorridor() {
     const tick = () => {
       const p = scrollYProgress.get();
       // the entrance title dissolves as the visitor steps inside; from there
-      // every principle is read off the building itself, never off an overlay
+      // every principle is read off the ribbon itself, never off an overlay
       if (introRef.current) {
         introRef.current.style.opacity = (1 - smoothstep(0.012, 0.05, p)).toFixed(3);
+      }
+      // the same ribbon travels on into Automation: the chapter title rises as
+      // it begins to split, and the resolution as the pathways merge back
+      if (autoIntroRef.current) {
+        autoIntroRef.current.style.opacity = (smoothstep(0.55, 0.61, p) * (1 - smoothstep(0.65, 0.70, p))).toFixed(3);
+      }
+      if (autoOutroRef.current) {
+        autoOutroRef.current.style.opacity = smoothstep(0.93, 0.98, p).toFixed(3);
       }
       raf = requestAnimationFrame(tick);
     };
@@ -63,7 +77,9 @@ function LightCorridor() {
       id="why"
       ref={sectionRef}
       className="relative border-t border-line bg-ink"
-      style={{ height: `${N * 128 + 120}vh` }}
+      // the one journey — the six principles and the Automation transformation
+      // of the same ribbon — over a single continuous scroll
+      style={{ height: "1720vh" }}
     >
       <div className="sticky top-0 h-screen overflow-hidden bg-ink">
         {/* the living ribbon of light travelling the void */}
@@ -88,16 +104,41 @@ function LightCorridor() {
           <p className="mt-7 text-eyebrow text-paper-faint">Scroll to drift &darr;</p>
         </div>
 
-        {/* the same principles, exposed to assistive tech (the 3D lettering is
-            decorative to a screen reader) */}
+        {/* the Automation chapter — same ribbon, further along. Its title rises
+            as the ribbon begins to split, over the same continuous scroll */}
+        <div ref={autoIntroRef} className="pointer-events-none absolute inset-x-0 top-[22vh] flex flex-col items-center text-center section-x" style={{ opacity: 0 }}>
+          <div className="mb-6 flex items-center gap-4">
+            <span className="h-px w-12 bg-violet" />
+            <span className="text-eyebrow text-paper-dim">Smart automation</span>
+          </div>
+          <h2 className="max-w-2xl font-display text-[clamp(2.2rem,4.6vw,3.6rem)] font-extrabold leading-[1.04] tracking-[-0.025em] text-paper">
+            One stream. Many systems.
+          </h2>
+        </div>
+
+        {/* the resolution — rises as the pathways rejoin the one ribbon */}
+        <div ref={autoOutroRef} className="pointer-events-none absolute inset-x-0 bottom-[16vh] flex flex-col items-center text-center section-x" style={{ opacity: 0 }}>
+          <p className="max-w-xl font-display text-[clamp(1.4rem,2.6vw,2.2rem)] font-bold leading-[1.15] tracking-[-0.02em] text-paper">
+            Complex systems become simple.
+          </p>
+        </div>
+
+        {/* the same principles and capabilities, exposed to assistive tech (the
+            3D lettering is decorative to a screen reader) */}
         <ul className="sr-only">
           {WHY_CARDS.map((card, i) => (
             <li key={card.title}>
               {idx(i)}. {card.title}. {card.body}
             </li>
           ))}
+          {AUTO_CAPS.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
         </ul>
       </div>
+
+      {/* anchor for the Automation chapter, roughly where the ribbon splits */}
+      <div id="automation" className="pointer-events-none absolute" style={{ top: "62%" }} aria-hidden />
     </section>
   );
 }
