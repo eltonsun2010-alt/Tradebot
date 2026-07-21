@@ -9,14 +9,13 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /* ------------------------------------------------------------------ *
- * The Light Flow — Southpage's signature. A single sculptural ribbon of
- * light travels an infinite black void: a physical object of liquid glass
- * with real width, thickness and a surface that catches light as it
- * twists — bright blooming edges, translucent detailed core. It weaves,
- * arcs and spirals, splits and rejoins; at each principle it slows,
- * widens and wraps a framing loop around the words while particles peel
- * from its edges, then it gathers itself and flows on. It is the only
- * light in the dark, and it is the main character.
+ * The Light Flow — Southpage's signature. A single thin ribbon of
+ * illuminated silk travels an infinite black void: it stays calm and
+ * softly lit through the journey, keeps its presence as it recedes and
+ * dissolves into the distance rather than ending, and only brightens
+ * where it swells to wrap a fine framing ring around a principle. Light
+ * fragments peel from its edges and drift; nothing floats at random. It
+ * is the only light in the dark, and it is the main character.
  * ------------------------------------------------------------------ */
 
 const N = WHY_CARDS.length;
@@ -152,6 +151,7 @@ function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (
   const pos: number[] = [];
   const nor: number[] = [];
   const uv: number[] = [];
+  const boost: number[] = [];
   const idx: number[] = [];
   for (let i = 0; i <= n; i += 1) {
     const u = i / n;
@@ -168,9 +168,11 @@ function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (
     const hw = halfW(u);
     const l = c.clone().add(w.clone().multiplyScalar(-hw));
     const r = c.clone().add(w.clone().multiplyScalar(hw));
+    const b = Math.min(1, widen(u)); // brighter only where it swells for a stop
     pos.push(l.x, l.y, l.z, r.x, r.y, r.z);
     nor.push(nrm.x, nrm.y, nrm.z, nrm.x, nrm.y, nrm.z);
     uv.push(u, 0, u, 1);
+    boost.push(b, b);
   }
   for (let i = 0; i < n; i += 1) {
     const a = i * 2;
@@ -180,6 +182,7 @@ function stripGeometry(halfW: (u: number) => number, twistAmp: number, offset: (
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute("aBoost", new THREE.Float32BufferAttribute(boost, 1));
   g.setIndex(idx);
   return g;
 }
@@ -195,27 +198,35 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, sheenCol: THREE.Colo
       uCore: { value: core }, uEdge: { value: edge }, uSheen: { value: sheenCol },
     },
     vertexShader: `
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv;
-      void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+      attribute float aBoost;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth;
+      void main(){ vUv=uv; vBoost=aBoost; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
       precision highp float;
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vBoost; varying float vDepth;
       uniform float uTime, uReveal, uAppear, uAlpha, uSoft; uniform vec3 uCore, uEdge, uSheen;
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
         float ndv = abs(dot(N, V));
-        // flat silk: luminous when its face is toward us, a fine line edge-on
-        float face = smoothstep(0.05, 0.8, ndv);
+        // flat silk: luminous facing us, but never vanishing edge-on — it keeps
+        // a fine bright line so the sculpture stays continuous as it rolls
+        float face = mix(0.3, 1.0, smoothstep(0.05, 0.82, ndv));
         vec3 L = normalize(vec3(0.3, 0.75, 0.55));
-        float sheen = pow(abs(dot(N, L)), 2.2);            // soft satin highlight
+        float sheen = pow(abs(dot(N, L)), 2.4);            // refined satin highlight
         float across = 1.0 - abs(vUv.y - 0.5) * 2.0;
         float softEdge = smoothstep(0.0, uSoft, across);   // edges bloom softly
-        float glow = pow(clamp(across, 0.0, 1.0), 1.7);    // gentle internal glow
-        float shimmer = 0.82 + 0.18 * sin(vUv.x * 15.0 - uTime * 1.0);
-        float ends = smoothstep(0.0, 0.04, vUv.x) * smoothstep(1.0, 0.955, vUv.x);
+        float glow = pow(clamp(across, 0.0, 1.0), 1.9);    // subtle internal glow
+        float shimmer = 0.86 + 0.14 * sin(vUv.x * 15.0 - uTime * 1.0);
+        // hold both ends until they are lost in distance — no trail-like cut-off
+        float ends = smoothstep(0.0, 0.02, vUv.x) * smoothstep(1.0, 0.985, vUv.x);
         float wipe = (1.0 - smoothstep(uAppear * 1.4 - 0.22, uAppear * 1.4, vUv.x)) * smoothstep(0.0, 0.22, uAppear);
-        vec3 col = mix(uEdge, uCore, glow) + sheen * 0.4 * uSheen;
-        float a = (0.28 + 0.55 * glow) * face * softEdge * shimmer * ends * wipe * uReveal * uAlpha;
+        // distance keeps it present but softer and lower-contrast, then lets it
+        // dissolve into black far away — "it continues beyond what I can see"
+        float dist = clamp(exp(-0.014 * vDepth), 0.09, 1.0);
+        // calm during travel; the brightest silk only at the stops it swells for
+        float boost = 0.5 + 0.85 * vBoost;
+        vec3 col = mix(uEdge, uCore, glow) + sheen * 0.3 * uSheen;
+        float a = (0.12 + 0.24 * glow) * face * softEdge * shimmer * ends * wipe * uReveal * uAlpha * boost * dist;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -246,9 +257,9 @@ function Ribbon({ shared }: { shared: Shared }) {
   // companion silks that part and rejoin
   const sA = useMemo(() => stripGeometry(() => 0.09, 1.0, (u) => 0.7 * Math.sin(u * 8.0) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
   const sB = useMemo(() => stripGeometry(() => 0.08, 1.1, (u) => -0.9 * Math.sin(u * 6.5 + 0.8) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.85, u)), []);
-  const body = useMemo(() => silkMaterial(new THREE.Color(0.96, 0.98, 1.0), new THREE.Color(0.52, 0.66, 0.98), new THREE.Color(1.0, 0.96, 0.86), 0.95, 0.42), []);
-  const halo = useMemo(() => silkMaterial(new THREE.Color(0.7, 0.82, 1.0), new THREE.Color(0.3, 0.45, 0.9), new THREE.Color(0.8, 0.88, 1.0), 0.28, 0.85), []);
-  const thin = useMemo(() => silkMaterial(new THREE.Color(0.85, 0.92, 1.0), new THREE.Color(0.45, 0.6, 0.95), new THREE.Color(0.9, 0.94, 1.0), 0.5, 0.6), []);
+  const body = useMemo(() => silkMaterial(new THREE.Color(0.9, 0.94, 1.0), new THREE.Color(0.36, 0.5, 0.86), new THREE.Color(0.95, 0.92, 0.82), 0.78, 0.42), []);
+  const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), new THREE.Color(0.22, 0.34, 0.78), new THREE.Color(0.7, 0.8, 1.0), 0.15, 0.85), []);
+  const thin = useMemo(() => silkMaterial(new THREE.Color(0.78, 0.88, 1.0), new THREE.Color(0.38, 0.52, 0.9), new THREE.Color(0.85, 0.9, 1.0), 0.32, 0.6), []);
   const mats = [body, halo, thin];
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -326,7 +337,7 @@ function RibbonSparks() {
           }`,
         fragmentShader: `
           uniform sampler2D uTex; varying float vA;
-          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(vec3(0.82,0.9,1.0), t.a * vA * 0.4); }`,
+          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(vec3(0.78,0.87,1.0), t.a * vA * 0.28); }`,
       }),
     [],
   );
@@ -390,7 +401,7 @@ function Installation({ i, shared }: { i: number; shared: Shared }) {
           }`,
         fragmentShader: `
           uniform sampler2D uTex; uniform vec3 uColor; varying float vA;
-          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(uColor, t.a * vA * 0.42); }`,
+          void main(){ vec4 t = texture2D(uTex, gl_PointCoord); gl_FragColor = vec4(uColor, t.a * vA * 0.3); }`,
       }),
     [hue],
   );
