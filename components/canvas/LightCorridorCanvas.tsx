@@ -308,6 +308,14 @@ function tubeAlong(curve: THREE.Curve<THREE.Vector3>, a: number, b: number, half
 const AUTO_BASE_ANG = [0.6, -0.6, Math.PI + 0.6, Math.PI - 0.6];
 const AUTO_RMAX = 2.1;
 const AUTO_TWIST = 1.2 * Math.PI;
+// each pathway takes on its own calm hue as it leaves the ribbon — the trail is
+// still one continuous neutral silk; only the branches bloom into colour
+const AUTO_HUES = [
+  new THREE.Color(0.82, 0.89, 1.0),  // Workflow Automation — cool white-blue
+  new THREE.Color(0.72, 0.7, 1.0),   // AI Assistants — soft violet
+  new THREE.Color(0.66, 0.9, 0.94),  // Business Integrations — teal
+  new THREE.Color(1.0, 0.9, 0.76),   // Customer Systems — warm champagne
+];
 function ribbonHalfWAt(s: number): number {
   const u = clamp(s / CURVE_L, 0, 1);
   return 0.3 + 0.34 * widen(u) + 0.14 * autoZone(s);
@@ -451,17 +459,18 @@ function Ribbon({ shared }: { shared: Shared }) {
 function AutoBranches({ shared }: { shared: Shared }) {
   const bodies = useMemo(() => AUTO_LABELS.map((_, j) => { const { curve, a, b } = autoBranchCurve(j); return tubeAlong(curve, a, b, 0.17, 0.04); }), []);
   const halos = useMemo(() => AUTO_LABELS.map((_, j) => { const { curve, a, b } = autoBranchCurve(j); return tubeAlong(curve, a, b, 0.4, 0.05); }), []);
-  const body = useMemo(() => silkMaterial(new THREE.Color(0.9, 0.94, 1.0), new THREE.Color(0.36, 0.5, 0.86), new THREE.Color(0.95, 0.92, 0.82), 0.82, 0.5), []);
-  const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), new THREE.Color(0.22, 0.34, 0.78), new THREE.Color(0.7, 0.8, 1.0), 0.14, 0.85), []);
+  // each pathway carries its own hue, but the same silk material and body
+  const bodyMats = useMemo(() => AUTO_HUES.map((h) => silkMaterial(h.clone(), h.clone().multiplyScalar(0.5), h.clone().lerp(new THREE.Color(1, 1, 1), 0.35), 0.82, 0.5)), []);
+  const haloMats = useMemo(() => AUTO_HUES.map((h) => silkMaterial(h.clone().multiplyScalar(0.78), h.clone().multiplyScalar(0.36), h.clone(), 0.14, 0.85)), []);
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const ap = shared.appear.current;
-    for (const m of [body, halo]) { m.uniforms.uTime.value = t; m.uniforms.uAppear.value = ap; }
+    for (const m of [...bodyMats, ...haloMats]) { m.uniforms.uTime.value = t; m.uniforms.uAppear.value = ap; }
   });
   return (
     <group>
-      {halos.map((g, j) => <mesh key={`h${j}`} geometry={g} material={halo} renderOrder={1} />)}
-      {bodies.map((g, j) => <mesh key={`b${j}`} geometry={g} material={body} renderOrder={2} />)}
+      {halos.map((g, j) => <mesh key={`h${j}`} geometry={g} material={haloMats[j]} renderOrder={1} />)}
+      {bodies.map((g, j) => <mesh key={`b${j}`} geometry={g} material={bodyMats[j]} renderOrder={2} />)}
       {AUTO_LABELS.map((_, j) => <AutoStation key={j} j={j} shared={shared} />)}
     </group>
   );
@@ -500,7 +509,7 @@ function AutoStation({ j, shared }: { j: number; shared: Shared }) {
   /* eslint-enable @typescript-eslint/no-explicit-any */
   return (
     <group ref={billboard} position={[anchor.x, anchor.y, anchor.z]}>
-      <Text ref={tickRef} font={FONT_BOLD} fontSize={0.16} color="#9db4de" anchorX="center" anchorY="middle"
+      <Text ref={tickRef} font={FONT_BOLD} fontSize={0.16} color={`#${AUTO_HUES[j].getHexString()}`} anchorX="center" anchorY="middle"
         letterSpacing={0.35} position={[0, 0.34, 0]} fillOpacity={0}>
         {`0${j + 1}`}
       </Text>
