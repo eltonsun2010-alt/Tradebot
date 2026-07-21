@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReducedMotion, useScroll } from "framer-motion";
 import { WHY_CARDS } from "@/lib/data";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -41,9 +41,11 @@ const AUTO_CAPS = ["Workflow Automation", "AI Assistants", "Business Integration
 
 function LightCorridor() {
   const sectionRef = useRef<HTMLElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const autoIntroRef = useRef<HTMLDivElement>(null);
   const autoOutroRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -67,6 +69,35 @@ function LightCorridor() {
         // the resolution holds, then clears as the single ribbon begins its dive
         autoOutroRef.current.style.opacity = (smoothstep(0.84, 0.88, p) * (1 - smoothstep(0.9, 0.93, p))).toFixed(3);
       }
+
+      // The world lives in a FIXED layer that never unmounts or slides — so the
+      // camera stays in one continuous space as the ribbon dives and the Process
+      // chapter arrives over the same void. We only gate its opacity so it
+      // belongs to the Why→Process range: it fades in as the journey begins,
+      // holds through the Process arrival (the void behind the heading), and
+      // dissolves only once the Process steps take over.
+      const vh = window.innerHeight;
+      let op = 0;
+      const sect = sectionRef.current;
+      if (sect) {
+        const wy = sect.getBoundingClientRect().top;
+        const enter = 1 - smoothstep(0, 0.12 * vh, Math.max(0, wy));
+        let exit = 0;
+        const proc = document.getElementById("process");
+        if (proc) {
+          const pt = proc.getBoundingClientRect().top;
+          // hold the void through the arrival (~first 1.3 screens of Process),
+          // then dissolve it before the structured steps begin
+          exit = smoothstep(-1.3 * vh, -1.85 * vh, pt);
+        }
+        op = enter * (1 - exit);
+      }
+      if (layerRef.current) {
+        layerRef.current.style.opacity = op.toFixed(3);
+        layerRef.current.style.visibility = op < 0.005 ? "hidden" : "visible";
+      }
+      const on = op > 0.02;
+      setActive((prev) => (prev !== on ? on : prev));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -74,17 +105,12 @@ function LightCorridor() {
   }, [scrollYProgress]);
 
   return (
-    <section
-      id="why"
-      ref={sectionRef}
-      className="relative border-t border-line bg-ink"
-      // the one journey — the six principles and the Automation transformation
-      // of the same ribbon — over a single continuous scroll
-      style={{ height: "1720vh" }}
-    >
-      <div className="sticky top-0 h-screen overflow-hidden bg-ink">
+    <>
+      {/* the persistent world — a fixed layer that never unmounts or slides away,
+          so the journey and the Process arrival share one continuous space */}
+      <div ref={layerRef} className="pointer-events-none fixed inset-0 z-0 bg-ink" style={{ opacity: 0, visibility: "hidden" }}>
         {/* the living ribbon of light travelling the void */}
-        <LightCorridorCanvas eventSource={sectionRef} scroll={scrollYProgress} count={N} />
+        <LightCorridorCanvas eventSource={sectionRef} scroll={scrollYProgress} active={active} count={N} />
 
         {/* a deep vignette to sink the void into black at the frame edges */}
         <div
@@ -123,8 +149,17 @@ function LightCorridor() {
             Complex systems become simple.
           </p>
         </div>
+      </div>
 
-
+      {/* the journey scroll spacer — its scroll drives the camera; the world is
+          painted in the fixed layer behind it. No sticky to release, so nothing
+          slides at the boundary into Process. */}
+      <section
+        id="why"
+        ref={sectionRef}
+        className="relative z-0 border-t border-line"
+        style={{ height: "1720vh" }}
+      >
         {/* the same principles and capabilities, exposed to assistive tech (the
             3D lettering is decorative to a screen reader) */}
         <ul className="sr-only">
@@ -137,11 +172,11 @@ function LightCorridor() {
             <li key={c}>{c}</li>
           ))}
         </ul>
-      </div>
 
-      {/* anchor for the Automation chapter, roughly where the ribbon splits */}
-      <div id="automation" className="pointer-events-none absolute" style={{ top: "62%" }} aria-hidden />
-    </section>
+        {/* anchor for the Automation chapter, roughly where the ribbon splits */}
+        <div id="automation" className="pointer-events-none absolute" style={{ top: "62%" }} aria-hidden />
+      </section>
+    </>
   );
 }
 

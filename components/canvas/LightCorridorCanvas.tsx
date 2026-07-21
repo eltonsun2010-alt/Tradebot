@@ -451,9 +451,13 @@ function Ribbon({ shared }: { shared: Shared }) {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     const ap = shared.appear.current;
+    // as the ribbon completes its dive it gracefully fades to nothing, so the
+    // void it leaves behind is clean when the Process chapter arrives over it
+    const exit = 1 - smoothstep(cameraMaxS - 7, cameraMaxS - 0.5, shared.spos.current);
     for (const m of mats) {
       m.uniforms.uTime.value = t;
       m.uniforms.uAppear.value = ap;
+      m.uniforms.uReveal.value = exit;
     }
   });
   return (
@@ -810,9 +814,11 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
 export default function LightCorridorCanvas({
   eventSource,
   scroll,
+  active: activeProp,
 }: {
   eventSource: RefObject<HTMLElement | null>;
   scroll?: { get: () => number };
+  active?: boolean;
   count?: number;
 }) {
   const reduced = usePrefersReducedMotion();
@@ -825,19 +831,22 @@ export default function LightCorridorCanvas({
   const shared = useRef<Shared>({ spos: { current: 0 }, appear: { current: 0 } }).current;
 
   useEffect(() => {
+    // when the host controls activity (a fixed/persistent canvas), skip the
+    // intersection observer — the host tells us when the journey is on screen
+    if (activeProp !== undefined) return;
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: "200px" });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [activeProp]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setStage(1), 900);
     return () => window.clearTimeout(id);
   }, []);
 
-  const active = !reduced && visible;
+  const active = !reduced && (activeProp !== undefined ? activeProp : visible);
 
   return (
     <div ref={ref} className="absolute inset-0">

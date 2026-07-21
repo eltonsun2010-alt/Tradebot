@@ -88,7 +88,9 @@ export function Process() {
   }, []);
 
   return (
-    <section id="process" className="relative bg-ink">
+    // sits above the persistent ribbon layer: the threshold is transparent so the
+    // ribbon's void shows through as the heading arrives, then the steps are solid
+    <section id="process" className="relative z-10">
       {/* the threshold — the delivered heading settles into a structured chapter */}
       <div ref={threshold} className="relative h-[180vh]">
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden section-x text-center">
@@ -134,8 +136,9 @@ export function Process() {
         </div>
       </div>
 
-      {/* the steps — a structured horizontal sequence, the chapter's own language */}
-      <div ref={root} className="relative border-t border-line md:h-screen md:overflow-hidden">
+      {/* the steps — a structured horizontal sequence, the chapter's own language.
+          Solid ink so the ribbon layer (now faded) is fully handed over */}
+      <div ref={root} className="relative border-t border-line bg-ink md:h-screen md:overflow-hidden">
         <div className="flex md:h-full md:items-center">
           <div
             ref={track}
