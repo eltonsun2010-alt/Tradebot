@@ -8,29 +8,33 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /* ------------------------------------------------------------------ *
- * The Weave — the Automation moment in the Light journey. The single
- * ribbon of silk slows, gathers energy, and divides into four braided
- * strands that explore in different directions through the void. Each
- * strand carries a capability, discovered as the camera drifts past it,
- * and light pulses run its length like information moving through a
- * system. At the far end the strands rejoin, seamlessly, into one
- * powerful stream: complex systems, made simple. No cards, no diagram —
- * the ribbon itself is the story.
+ * The Weave — the Automation chapter of the one ribbon. This is not a
+ * second sculpture: the same silk ribbon of the Light journey travels
+ * straight through, in the same colour, thickness and material. As it
+ * reaches Automation it widens, and fine branches peel from its own
+ * edges, grow into flowing pathways that each carry a capability, then
+ * retract and merge seamlessly back into the single ribbon that carries
+ * on. The ribbon became more complex because we entered Automation — it
+ * did not become a different animation.
  * ------------------------------------------------------------------ */
 
 const FB = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const FONT_BOLD = `${FB}/fonts/syne-700.ttf`;
-const FONT_REG = `${FB}/fonts/syne-400.ttf`;
 
-// the four capabilities the ribbon introduces, in the order the camera meets
-// them — each a distinct, calm hue so the strands read as different pathways
+// the four capabilities the branches introduce, in the order the camera meets
+// them — same silk as the main ribbon; they are pathways of it, not new colours
 export const WEAVE = [
-  { label: "Workflow Automation", hue: new THREE.Color(0.82, 0.89, 1.0) },
-  { label: "AI Assistants", hue: new THREE.Color(0.72, 0.7, 1.0) },
-  { label: "Business Integrations", hue: new THREE.Color(0.66, 0.9, 0.94) },
-  { label: "Customer Systems", hue: new THREE.Color(1.0, 0.9, 0.76) },
+  "Workflow Automation",
+  "AI Assistants",
+  "Business Integrations",
+  "Customer Systems",
 ] as const;
-const NS = WEAVE.length;
+const NB = WEAVE.length;
+
+// the one ribbon's colours — identical to the Light Flow, so this reads as the
+// same continuous piece of light
+const CORE = new THREE.Color(0.9, 0.94, 1.0);
+const EDGE = new THREE.Color(0.36, 0.5, 0.86);
 
 const UP = new THREE.Vector3(0, 1, 0);
 function clamp(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
@@ -40,17 +44,17 @@ function smoothstep(a: number, b: number, x: number) {
 }
 
 /* -------------------------- the braid geometry -------------------------- */
-// the single stream travelling forward through the void, gently drifting
+// the single stream travelling forward through the void, drifting with the same
+// movement language as the main journey
 const ZL = 68;
 function spine(t: number, o: THREE.Vector3) {
   o.set(
-    2.0 * Math.sin(t * Math.PI * 1.1),
-    1.1 * Math.sin(t * Math.PI * 0.9 + 0.4),
+    2.2 * Math.sin(t * Math.PI * 1.15) + 0.8 * Math.sin(t * Math.PI * 2.3),
+    1.2 * Math.sin(t * Math.PI * 0.9 + 0.4) + 0.5 * Math.cos(t * Math.PI * 1.7),
     9 - t * ZL,
   );
   return o;
 }
-// a stable frame along the spine (forward + a right/up that don't tumble)
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 function spineFrame(t: number) {
@@ -66,56 +70,68 @@ function spineFrame(t: number) {
   return { p, fwd, right, up };
 }
 
-// how far the strands are apart at position t — nil at both ends (one stream),
-// widest through the middle where the four pathways explore
-const spread = (t: number) => Math.pow(Math.sin(Math.PI * clamp(t, 0, 1)), 1.25);
-const RMAX = 2.55;
-const TWIST = 1.5 * Math.PI;
+// the automation zone — where the ribbon widens and the branches live
+const T_SPLIT = 0.28;
+const T_MERGE = 0.72;
+const zone = (t: number) => smoothstep(0.16, 0.30, t) * smoothstep(0.84, 0.70, t);
+// the ribbon's half-width: the Light Flow's thickness, swelling a little as it
+// gathers energy for the split
+const ribbonHalfW = (t: number) => 0.3 + 0.1 * zone(t) + 0.02 * Math.sin(t * 28);
+// how far the branches have emerged from the ribbon (0 outside the zone)
+const emerge = (t: number) => smoothstep(T_SPLIT, T_SPLIT + 0.12, t) * smoothstep(T_MERGE, T_MERGE - 0.12, t);
 
-// the centre-line of strand j: the spine, displaced out into its own pathway,
-// braiding slowly around the stream as it travels
-function strandPoint(j: number, t: number, out: THREE.Vector3) {
+const RMAX = 2.0;
+const TWIST = 1.2 * Math.PI;
+// two branches lean off each flat edge of the ribbon, then fan out and braid
+const BASE_ANG = [0.6, -0.6, Math.PI + 0.6, Math.PI - 0.6];
+
+// the centre-line of branch j: it starts just inside the ribbon's edge and,
+// only where it has emerged, swings out into its own pathway
+function branchPoint(j: number, t: number, out: THREE.Vector3) {
   const fr = spineFrame(t);
-  const ang = (j / NS) * Math.PI * 2 + t * TWIST;
-  const rad = RMAX * spread(t) * (0.72 + 0.28 * Math.sin(t * Math.PI * 2.0 + j * 1.7));
+  const e = emerge(t);
+  const indiv = 0.7 + 0.3 * Math.sin(t * Math.PI * 2 + j * 1.7);
+  const edge = ribbonHalfW(t) * 0.85;
+  const rad = edge + e * (RMAX * indiv - edge);
+  const ang = BASE_ANG[j] + TWIST * e;
   out.copy(fr.p)
     .addScaledVector(fr.right, Math.cos(ang) * rad)
     .addScaledVector(fr.up, Math.sin(ang) * rad);
   return out;
 }
 
-function strandCurve(j: number): THREE.CatmullRomCurve3 {
-  const pts: THREE.Vector3[] = [];
-  const N = 150;
-  for (let i = 0; i <= N; i += 1) {
-    pts.push(strandPoint(j, i / N, new THREE.Vector3()));
-  }
-  return new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5);
-}
-
-// the flattened-silk tube (a wafer-thin lens section) swept along a strand —
-// the same body language as the Light Flow: never a zero-area strip, so it
-// stays present as it rolls, with a bright edge and a luminous face
+// the flattened-silk tube (a wafer-thin lens section) swept along a path in
+// uniform parameter space, so t ≈ u and the width / emerge functions line up.
+// `emergeFn` fades a strand in only where it has peeled away from the ribbon.
 const CROSS = 8;
-function silkTube(curve: THREE.Curve<THREE.Vector3>, halfW: number, halfT: number): THREE.BufferGeometry {
+function silkTube(
+  curve: THREE.Curve<THREE.Vector3>,
+  a: number,
+  b: number,
+  halfWFn: (t: number) => number,
+  halfT: number,
+  emergeFn: (t: number) => number = () => 1,
+): THREE.BufferGeometry {
   const n = 220;
   const pos: number[] = [];
   const nor: number[] = [];
   const uv: number[] = [];
+  const em: number[] = [];
   const idx: number[] = [];
   const P = new THREE.Vector3();
   const T = new THREE.Vector3();
   for (let i = 0; i <= n; i += 1) {
-    const u = i / n;
-    curve.getPointAt(u, P);
-    curve.getTangentAt(u, T).normalize();
+    const s = i / n;
+    const t = a + s * (b - a);
+    curve.getPoint(s, P);
+    curve.getTangent(s, T).normalize();
     let R = new THREE.Vector3().crossVectors(UP, T);
     if (R.lengthSq() < 1e-4) R.set(1, 0, 0);
     R.normalize();
     const Nr = new THREE.Vector3().crossVectors(T, R).normalize();
-    // taper to a fine point at both ends so the strands melt into the stream
-    const taper = Math.pow(Math.sin(Math.PI * u), 0.35);
-    const hw = halfW * (0.5 + 0.5 * taper);
+    const taper = Math.pow(Math.sin(Math.PI * s), 0.35);
+    const hw = halfWFn(t) * (0.5 + 0.5 * taper);
+    const ev = emergeFn(t);
     for (let j = 0; j < CROSS; j += 1) {
       const th = (j / CROSS) * Math.PI * 2;
       const ct = Math.cos(th);
@@ -124,29 +140,33 @@ function silkTube(curve: THREE.Curve<THREE.Vector3>, halfW: number, halfT: numbe
       const normal = R.clone().multiplyScalar(halfT * ct).addScaledVector(Nr, hw * st).normalize();
       pos.push(point.x, point.y, point.z);
       nor.push(normal.x, normal.y, normal.z);
-      uv.push(u, 0.5 + 0.5 * ct);
+      uv.push(s, 0.5 + 0.5 * ct);
+      em.push(ev);
     }
   }
   for (let i = 0; i < n; i += 1) {
     for (let j = 0; j < CROSS; j += 1) {
-      const a = i * CROSS + j;
-      const b = i * CROSS + ((j + 1) % CROSS);
-      const c = (i + 1) * CROSS + j;
-      const d = (i + 1) * CROSS + ((j + 1) % CROSS);
-      idx.push(a, c, b, b, c, d);
+      const p0 = i * CROSS + j;
+      const p1 = i * CROSS + ((j + 1) % CROSS);
+      const p2 = (i + 1) * CROSS + j;
+      const p3 = (i + 1) * CROSS + ((j + 1) % CROSS);
+      idx.push(p0, p2, p1, p1, p2, p3);
     }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute("aEmerge", new THREE.Float32BufferAttribute(em, 1));
   g.setIndex(idx);
   return g;
 }
 
-// illuminated silk with a travelling pulse — existence (a faint constant body,
-// always drawn, never facing-dependent) kept apart from illumination (facing
-// glow, sheen and a moving band of light that reads as information flowing)
+// illuminated silk — the exact material language of the Light Flow: existence
+// (a faint constant body, never facing-dependent, floored so it recedes but is
+// always present) kept apart from illumination (facing glow softened by haze),
+// plus a travelling pulse that reads as information moving through the system.
+// `aEmerge` lets a branch appear only where it has peeled from the ribbon.
 function silkMaterial(core: THREE.Color, edge: THREE.Color, alpha: number) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
@@ -155,35 +175,33 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, alpha: number) {
       uCore: { value: core }, uEdge: { value: edge },
     },
     vertexShader: `
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vDepth;
-      void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
+      attribute float aEmerge;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vDepth; varying float vEmerge;
+      void main(){ vUv=uv; vEmerge=aEmerge; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); vDepth=-mv.z; gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `
       precision highp float;
-      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vDepth;
+      varying vec3 vN; varying vec3 vV; varying vec2 vUv; varying float vDepth; varying float vEmerge;
       uniform float uTime, uReveal, uAlpha, uFlow; uniform vec3 uCore, uEdge;
       void main(){
         vec3 N = normalize(vN); vec3 V = normalize(vV);
         float ndv = abs(dot(N, V));
-        vec3 L = normalize(vec3(0.3, 0.75, 0.55));
-        float sheen = pow(abs(dot(N, L)), 2.4);
         float across = 1.0 - abs(vUv.y - 0.5) * 2.0;
         float softEdge = smoothstep(0.0, 0.5, across);
         float glow = pow(clamp(across, 0.0, 1.0), 1.9);
         float ends = smoothstep(0.0, 0.02, vUv.x) * smoothstep(1.0, 0.98, vUv.x);
-        // EXISTENCE — a faint body that never depends on facing the camera,
-        // floored so it recedes into the dark but the strand is always there
+        // branches fade in only where they have peeled from the ribbon's edge
+        float peel = smoothstep(0.04, 0.28, vEmerge);
         float presence = clamp(exp(-0.010 * vDepth), 0.4, 1.0);
         float base = 0.055 * (0.55 + 0.45 * softEdge) * ends * presence;
-        // ILLUMINATION — facing glow softened by distance haze
         float face = 0.4 + 0.6 * smoothstep(0.05, 0.82, ndv);
         float haze = clamp(exp(-0.014 * vDepth), 0.0, 1.0);
         float lit = (0.10 + 0.24 * glow) * face * softEdge * ends * haze;
-        // information flowing — a few soft bands of light running the strand
+        // information flowing — soft bands of light running the length
         float pv = fract(vUv.x * 2.0 - uTime * 0.16);
         float pulse = smoothstep(0.0, 0.05, pv) * (1.0 - smoothstep(0.05, 0.16, pv));
         lit += pulse * 0.5 * uFlow * softEdge * haze;
         vec3 col = mix(uEdge, uCore, glow) + pulse * uFlow * 0.4 * uCore;
-        float a = (base + lit) * uReveal * uAlpha;
+        float a = (base + lit) * uReveal * uAlpha * peel;
         gl_FragColor = vec4(col, a);
       }`,
   });
@@ -191,26 +209,64 @@ function silkMaterial(core: THREE.Color, edge: THREE.Color, alpha: number) {
 
 type Shared = { p: { current: number }; appear: { current: number } };
 
-/* ------------------------------ a strand ------------------------------ */
-function Strand({ j, shared }: { j: number; shared: Shared }) {
-  const cap = WEAVE[j];
-  const curve = useMemo(() => strandCurve(j), [j]);
-  const bodyGeo = useMemo(() => silkTube(curve, 0.2, 0.04), [curve]);
-  const haloGeo = useMemo(() => silkTube(curve, 0.52, 0.055), [curve]);
-  const body = useMemo(() => silkMaterial(new THREE.Color(0.94, 0.97, 1.0).multiply(cap.hue), cap.hue.clone().multiplyScalar(0.55), 0.95), [cap.hue]);
-  const halo = useMemo(() => silkMaterial(cap.hue.clone(), cap.hue.clone().multiplyScalar(0.4), 0.18), [cap.hue]);
+/* --------------------------- the main ribbon --------------------------- */
+// the one continuous ribbon of the journey, passing straight through Automation
+// — same silk, same colour, same thickness — swelling a little through the zone
+function MainRibbon({ shared }: { shared: Shared }) {
+  const curve = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 130; i += 1) pts.push(spine(i / 130, new THREE.Vector3()));
+    return new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5);
+  }, []);
+  const bodyGeo = useMemo(() => silkTube(curve, 0, 1, ribbonHalfW, 0.05), [curve]);
+  const haloGeo = useMemo(() => silkTube(curve, 0, 1, (t) => ribbonHalfW(t) * 2.1 + 0.2, 0.06), [curve]);
+  const body = useMemo(() => silkMaterial(CORE.clone(), EDGE.clone(), 0.82), []);
+  const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), EDGE.clone().multiplyScalar(0.7), 0.15), []);
+  useFrame((s) => {
+    const t = s.clock.elapsedTime;
+    for (const m of [body, halo]) { m.uniforms.uTime.value = t; m.uniforms.uReveal.value = shared.appear.current; }
+    // pulses strongest as the single stream gathers and again once it reforms
+    body.uniforms.uFlow.value = 0.4 + 0.4 * zone(shared.p.current);
+  });
+  return (
+    <group>
+      <mesh geometry={haloGeo} material={halo} renderOrder={1} />
+      <mesh geometry={bodyGeo} material={body} renderOrder={2} />
+    </group>
+  );
+}
 
-  // the label sits where this strand is well clear of the others, staggered
-  // along the braid so the four are discovered one after another
-  const spacing = 0.4 / (NS - 1);
-  const tLabel = 0.30 + j * spacing; // 0.30 .. 0.70
-  const labelData = useMemo(() => {
+/* ------------------------------ a branch ------------------------------ */
+// a pathway that peels from the ribbon's edge, carries one capability, and
+// retracts back — the same silk, only thinner
+function Branch({ j, shared }: { j: number; shared: Shared }) {
+  const label = WEAVE[j];
+  const a = T_SPLIT - 0.05;
+  const b = T_MERGE + 0.05;
+  const curve = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const N = 120;
+    for (let i = 0; i <= N; i += 1) {
+      const t = a + (i / N) * (b - a);
+      pts.push(branchPoint(j, t, new THREE.Vector3()));
+    }
+    return new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5);
+  }, [j, a, b]);
+  const bodyGeo = useMemo(() => silkTube(curve, a, b, () => 0.17, 0.04, emerge), [curve, a, b]);
+  const haloGeo = useMemo(() => silkTube(curve, a, b, () => 0.4, 0.05, emerge), [curve, a, b]);
+  const body = useMemo(() => silkMaterial(CORE.clone(), EDGE.clone(), 0.85), []);
+  const halo = useMemo(() => silkMaterial(new THREE.Color(0.56, 0.7, 1.0), EDGE.clone().multiplyScalar(0.7), 0.14), []);
+
+  // the label sits where this branch is well clear of the ribbon, staggered
+  // along the zone so the four are discovered one after another
+  const spacing = 0.32 / (NB - 1);
+  const tLabel = 0.34 + j * spacing; // 0.34 .. 0.66
+  const anchor = useMemo(() => {
     const fr = spineFrame(tLabel);
-    const p = strandPoint(j, tLabel, new THREE.Vector3());
+    const p = branchPoint(j, tLabel, new THREE.Vector3());
     const outward = p.clone().sub(fr.p).normalize();
-    const anchor = p.clone().addScaledVector(outward, 0.85);
-    return { anchor, hueHex: `#${cap.hue.getHexString()}` };
-  }, [j, tLabel, cap.hue]);
+    return p.clone().addScaledVector(outward, 0.85);
+  }, [j, tLabel]);
 
   const billboard = useRef<THREE.Group>(null);
   /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -220,22 +276,17 @@ function Strand({ j, shared }: { j: number; shared: Shared }) {
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const ap = shared.appear.current;
     for (const m of [body, halo]) {
       m.uniforms.uTime.value = t;
-      m.uniforms.uReveal.value = ap;
+      m.uniforms.uReveal.value = shared.appear.current;
+      m.uniforms.uFlow.value = 0.9; // the branches always carry flowing light
     }
-    // flow (pulses) fade in with the split and settle to a calm baseline
-    const sp = spread(shared.p.current);
-    body.uniforms.uFlow.value = 0.35 + 0.65 * sp;
-    // reveal the label as the camera passes — but only ever the single nearest
-    // strand, so two capabilities never crowd the frame at once
-    const nearest = clamp(Math.round((shared.p.current - 0.30) / spacing), 0, NS - 1);
-    const near = j === nearest ? smoothstep(0.09, 0.0, Math.abs(shared.p.current - tLabel)) : 0;
-    const target = near * smoothstep(0.2, 0.6, ap);
+    // reveal the label as the camera passes — only ever the nearest branch
+    const nearest = clamp(Math.round((shared.p.current - 0.34) / spacing), 0, NB - 1);
+    const near = j === nearest ? smoothstep(0.08, 0.0, Math.abs(shared.p.current - tLabel)) : 0;
+    const target = near * smoothstep(0.2, 0.6, shared.appear.current);
     shown.current += (target - shown.current) * 0.12;
-    const { camera } = state;
-    if (billboard.current) billboard.current.quaternion.copy(camera.quaternion);
+    if (billboard.current) billboard.current.quaternion.copy(state.camera.quaternion);
     for (const ref of [labelRef, tickRef]) {
       const o = ref.current;
       if (!o) continue;
@@ -249,43 +300,23 @@ function Strand({ j, shared }: { j: number; shared: Shared }) {
     <group>
       <mesh geometry={haloGeo} material={halo} renderOrder={1} />
       <mesh geometry={bodyGeo} material={body} renderOrder={2} />
-      <group ref={billboard} position={[labelData.anchor.x, labelData.anchor.y, labelData.anchor.z]}>
-        <Text ref={tickRef} font={FONT_BOLD} fontSize={0.16} color={labelData.hueHex} anchorX="center" anchorY="middle"
+      <group ref={billboard} position={[anchor.x, anchor.y, anchor.z]}>
+        <Text ref={tickRef} font={FONT_BOLD} fontSize={0.16} color="#9db4de" anchorX="center" anchorY="middle"
           letterSpacing={0.35} position={[0, 0.34, 0]} fillOpacity={0}>
           {`0${j + 1}`}
         </Text>
         <Text ref={labelRef} font={FONT_BOLD} fontSize={0.44} color="#f5f8ff" anchorX="center" anchorY="middle"
           textAlign="center" maxWidth={3.4} lineHeight={1.05} letterSpacing={-0.01} position={[0, -0.06, 0]} fillOpacity={0}>
-          {cap.label}
+          {label}
         </Text>
       </group>
     </group>
   );
 }
 
-/* --------------------------- the core stream --------------------------- */
-// a faint continuous thread down the spine so the eye reads one system even
-// where the four strands have parted — the connective tissue of the weave
-function CoreStream({ shared }: { shared: Shared }) {
-  const curve = useMemo(() => {
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 120; i += 1) pts.push(spine(i / 120, new THREE.Vector3()));
-    return new THREE.CatmullRomCurve3(pts, false, "centripetal", 0.5);
-  }, []);
-  const geo = useMemo(() => silkTube(curve, 0.1, 0.025), [curve]);
-  const mat = useMemo(() => silkMaterial(new THREE.Color(0.9, 0.94, 1.0), new THREE.Color(0.36, 0.46, 0.8), 0.5), []);
-  useFrame((s) => {
-    mat.uniforms.uTime.value = s.clock.elapsedTime;
-    mat.uniforms.uReveal.value = shared.appear.current;
-    // the core is brightest where the strands are merged (the single stream)
-    mat.uniforms.uFlow.value = 0.6 * (1.0 - spread(shared.p.current));
-  });
-  return <mesh geometry={geo} material={mat} renderOrder={1} />;
-}
-
 /* ------------------------------- camera ------------------------------- */
-// a cinematic drone drifting the length of the weave: pulled back and raised
-// through the split to take in all four pathways, easing in as they rejoin
+// a cinematic drone following the one ribbon: it eases back and rises through
+// the split to take in the pathways, then settles as they merge back
 function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Shared }) {
   const { camera } = useThree();
   const eased = useRef(0);
@@ -305,16 +336,16 @@ function Rig({ scroll, shared }: { scroll?: { get: () => number }; shared: Share
     const scrolled = smoothstep(0.004, 0.03, eased.current);
     shared.appear.current = Math.max(timeApp, scrolled);
 
-    // travel along the spine; dolly out and rise as the pathways spread
-    const ct = 0.06 + p * 0.86;
+    // travel along the ribbon; ease back and rise where the pathways spread
+    const ct = 0.05 + p * 0.9;
     const fr = spineFrame(ct);
-    const sp = spread(ct);
-    const back = 8.5 + 6.5 * sp;
+    const z = zone(ct);
+    const back = 7.5 + 5.5 * z;
     const camTarget = fr.p.clone()
       .addScaledVector(fr.fwd, -back)
-      .addScaledVector(fr.up, 2.0 + 3.4 * sp + Math.sin(t * 0.14) * 0.25)
-      .addScaledVector(fr.right, -1.6 + Math.sin(t * 0.11) * 0.4);
-    const lookTarget = fr.p.clone().addScaledVector(fr.fwd, 2.5);
+      .addScaledVector(fr.up, 1.7 + 2.6 * z + Math.sin(t * 0.14) * 0.22)
+      .addScaledVector(fr.right, -1.3 + Math.sin(t * 0.11) * 0.35);
+    const lookTarget = fr.p.clone().addScaledVector(fr.fwd, 2.8);
 
     if (!inited.current) { pos.current.copy(camTarget); look.current.copy(lookTarget); inited.current = true; }
     pos.current.lerp(camTarget, Math.min(1, delta * 1.4));
@@ -361,9 +392,9 @@ export default function RibbonWeaveCanvas({
         eventPrefix="client"
         onCreated={({ scene }) => { scene.fog = new THREE.FogExp2(0x02030a, 0.012); }}
       >
-        <CoreStream shared={shared} />
+        <MainRibbon shared={shared} />
         {WEAVE.map((_, j) => (
-          <Strand key={j} j={j} shared={shared} />
+          <Branch key={j} j={j} shared={shared} />
         ))}
         <Rig scroll={scroll} shared={shared} />
       </Canvas>
