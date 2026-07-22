@@ -9,17 +9,18 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 /* ==================================================================== *
- * The Constellation. A living night sky suspended in darkness. A field
- * of stars already exists, breathing gently. As the visitor drifts
- * through, a pulse of light crosses the sky and the stars themselves
- * travel — slowly, gracefully, pulled as if by an invisible force — and
- * gather into the shape of the question: a luminous, letter-shaped
- * constellation. That formation is the framework. Once it settles, refined
- * typography rises from within it, aligned exactly to the stars, which stay
- * shining in and around the letters — so the words read as though written
- * by the night sky itself. The answer follows in elegant type. When the
- * visitor moves on the type dissolves and the stars drift back into the
- * sky, and the next question forms. The sky is never destroyed.
+ * The Constellation. A living night sky suspended in darkness. The stars
+ * are not the words — they are celestial guides. As the visitor drifts
+ * through, one region awakens: a pulse crosses the sky and the stars glide
+ * into an elegant composition AROUND the question — a ring, an underline, a
+ * crown, corner accents — a frame that orbits and emphasises the space where
+ * the question lives. Then, from the centre of that arrangement, the
+ * question is revealed: crisp typography the constellation has uncovered —
+ * not become, not replaced. The stars remain exactly where they are,
+ * glowing around the words, presenting them. Reading holds all three — the
+ * constellation, the stars, the typography — the type the hero, the sky its
+ * frame. Leaving, the words fade and the stars drift back into the night.
+ * Like spotlights revealing a sculpture: they reveal it, they never become it.
  * ==================================================================== */
 
 const N = FAQS.length;
@@ -44,7 +45,6 @@ function mulberry(seed: number) {
   };
 }
 
-// how many stars make up the sky — and, when they gather, sketch the letters
 const COUNT = 460;
 
 /* ----------------------- the resting constellation ----------------------- */
@@ -88,13 +88,59 @@ const LINKS: [number, number][] = (() => {
   return out.slice(0, 60);
 })();
 
+/* ------------------- the celestial frame around the question ------------------- */
+// Not letters — a composition the stars settle into AROUND the words: an
+// elliptical ring, an understroke beneath, a light crown above, corner accents,
+// and a sparse outer halo. The centre is left clear for the typography.
+const FRAME_A = 5.0;   // ring semi-axes
+const FRAME_B = 2.6;
+const FRAME = (() => {
+  const r = mulberry(20240);
+  const out = new Float32Array(COUNT * 2);
+  let idx = 0;
+  const put = (x: number, y: number) => { if (idx < COUNT) { out[idx * 2] = x; out[idx * 2 + 1] = y; idx += 1; } };
+  // the ring
+  const ring = 210;
+  for (let i = 0; i < ring; i += 1) {
+    const ang = (i / ring) * Math.PI * 2 + (r() - 0.5) * 0.14;
+    const rad = 1 + (r() - 0.5) * 0.1;
+    put(Math.cos(ang) * FRAME_A * rad + (r() - 0.5) * 0.3, Math.sin(ang) * FRAME_B * rad + (r() - 0.5) * 0.3);
+  }
+  // the understroke — a line of stars emphasising the question
+  const und = 72;
+  for (let i = 0; i < und; i += 1) {
+    const x = (r() * 2 - 1) * 3.3;
+    const dip = 0.12 * (x / 3.3) * (x / 3.3);
+    put(x, -1.72 - dip + (r() - 0.5) * 0.22);
+  }
+  // a light crown above
+  const top = 40;
+  for (let i = 0; i < top; i += 1) {
+    const x = (r() * 2 - 1) * 2.5;
+    const lift = 0.14 * (x / 2.5) * (x / 2.5);
+    put(x, 1.72 + lift + (r() - 0.5) * 0.2);
+  }
+  // corner accents — framing brackets
+  const corners: [number, number][] = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+  const per = 18;
+  for (const [sx, sy] of corners) {
+    for (let i = 0; i < per; i += 1) put(sx * (3.6 + (r() - 0.5) * 0.7), sy * (2.05 + (r() - 0.5) * 0.6));
+  }
+  // a sparse outer halo, blending the frame back into the sky
+  while (idx < COUNT) {
+    const ang = r() * Math.PI * 2;
+    const rad = 1.32 + r() * 0.5;
+    put(Math.cos(ang) * FRAME_A * rad, Math.sin(ang) * FRAME_B * rad);
+  }
+  return out;
+})();
+
 /* ------------------------------ the sequence ------------------------------ */
-// each question owns a stretch of scroll; within it a slow ceremony unfolds:
 //   0.00–0.14  the sky rests; a pulse of light begins to cross it
-//   0.14–0.44  the stars travel, gathering into the letter-shaped framework
-//   0.46–0.60  refined type rises from within the constellation
-//   0.60–0.76  the question is read; the answer settles in beneath
-//   0.74–0.96  the type dissolves; the stars drift back into the sky
+//   0.14–0.44  the stars glide into the celestial frame around the question
+//   0.48–0.62  the question is revealed from the centre of the frame
+//   0.62–0.76  reading — the type is the hero, framed by the glowing stars
+//   0.74–0.96  the words fade; the stars drift back into the constellation
 function winPos(p: number): { active: number; t: number } {
   const x = clamp(p * N, 0, N - 1e-4);
   const active = Math.floor(x);
@@ -102,79 +148,11 @@ function winPos(p: number): { active: number; t: number } {
 }
 const formF = (t: number) => smoothstep(0.14, 0.44, t) * (1 - smoothstep(0.74, 0.96, t));
 const fieldF = (t: number) => smoothstep(0.05, 0.2, t) * (1 - smoothstep(0.86, 0.99, t));
-const readF = (t: number) => smoothstep(0.46, 0.60, t) * (1 - smoothstep(0.76, 0.88, t));
-const ansTF = (t: number) => smoothstep(0.6, 0.7, t) * (1 - smoothstep(0.8, 0.88, t));
+const readF = (t: number) => smoothstep(0.48, 0.62, t) * (1 - smoothstep(0.76, 0.88, t));
+const ansTF = (t: number) => smoothstep(0.62, 0.72, t) * (1 - smoothstep(0.8, 0.88, t));
 
-/* --------- laying out the question: shared by the stars and the type --------- */
-const HEAD_FONT = 0.58;  // world units per em — the SAME scale for stars and type
-const HEAD_WRAP = 780;   // wrap width in sample px
-const HEAD_LH = 1.34;    // line height, shared so the two line up
-const SAMPLE_PX = 44;
-const SAMPLE_FONT = `700 ${SAMPLE_PX}px 'Syne', system-ui, -apple-system, Segoe UI, sans-serif`;
-
-function wrapLines(text: string): string[] {
-  if (typeof document === "undefined") return [text];
-  const ctx = document.createElement("canvas").getContext("2d");
-  if (!ctx) return [text];
-  ctx.font = SAMPLE_FONT;
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let line = "";
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (ctx.measureText(test).width > HEAD_WRAP && line) { lines.push(line); line = w; }
-    else line = test;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-// sketch the wrapped lines as star targets, in the same world units and layout
-// the crisp type will use — so the stars sit inside and around the letters
-function sampleFromLines(lines: string[]): Float32Array {
-  const out = new Float32Array(COUNT * 2);
-  if (typeof document === "undefined") return out;
-  const lh = SAMPLE_PX * HEAD_LH;
-  const cv = document.createElement("canvas");
-  const ctx = cv.getContext("2d");
-  if (!ctx) return out;
-  const width = HEAD_WRAP + 48;
-  const height = Math.ceil(lines.length * lh + 40);
-  cv.width = width;
-  cv.height = height;
-  ctx.font = SAMPLE_FONT;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  lines.forEach((ln, i) => ctx.fillText(ln, width / 2, 20 + i * lh));
-
-  const data = ctx.getImageData(0, 0, width, height).data;
-  const pts: number[] = [];
-  const step = 2;
-  for (let y = 0; y < height; y += step) {
-    for (let x = 0; x < width; x += step) {
-      if (data[(y * width + x) * 4 + 3] > 130) pts.push(x, y);
-    }
-  }
-  const found = pts.length / 2;
-  const worldScale = HEAD_FONT / SAMPLE_PX;
-  const cx = width / 2;
-  const cy = height / 2;
-  for (let i = 0; i < COUNT; i += 1) {
-    let k: number;
-    if (found > 0) {
-      const j = Math.floor(((i * 0.61803398875) % 1) * found + (i % Math.max(1, Math.floor(found / COUNT) + 1)));
-      k = (j % found) * 2;
-    } else k = 0;
-    const px = pts[k] ?? cx;
-    const py = pts[k + 1] ?? cy;
-    out[i * 2] = (px - cx) * worldScale;
-    out[i * 2 + 1] = (cy - py) * worldScale;
-  }
-  return out;
-}
-
-type Glyphs = { lines: string[]; pts: Float32Array };
+const QFONT = 0.5;   // hero question, world units per em
+const QWRAP = 6.4;   // wrap width in world units
 
 /* ----------------------------- shared bus ----------------------------- */
 type Shared = {
@@ -183,7 +161,7 @@ type Shared = {
   t: number;
   form: number;
   field: number;
-  read: number;     // the crisp type rising from within the constellation
+  read: number;
   pulsePos: number;
   pulseAmt: number;
   anchor: THREE.Vector3;
@@ -263,13 +241,13 @@ function Links({ shared }: { shared: Shared }) {
   return <lineSegments geometry={geo} material={mat} />;
 }
 
-/* --------------------- the star field — the letter framework --------------------- */
-function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
+/* --------------------- the stars — celestial guides / spotlights --------------------- */
+function StarField({ shared }: { shared: Shared }) {
   const geo = useMemo(() => {
     const r = mulberry(4242);
     const position = new Float32Array(COUNT * 3);
     const aHome = new Float32Array(COUNT * 3);
-    const aGlyph = new Float32Array(COUNT * 2);
+    const aFrame = new Float32Array(COUNT * 2);
     const aZ = new Float32Array(COUNT);
     const aSeed = new Float32Array(COUNT);
     const aSize = new Float32Array(COUNT);
@@ -277,70 +255,72 @@ function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
     const aRnd = new Float32Array(COUNT);
     for (let i = 0; i < COUNT; i += 1) {
       aHome[i * 3] = HOME[i].x; aHome[i * 3 + 1] = HOME[i].y; aHome[i * 3 + 2] = HOME[i].z;
-      aGlyph[i * 2] = glyphs[0].pts[i * 2];
-      aGlyph[i * 2 + 1] = glyphs[0].pts[i * 2 + 1];
+      aFrame[i * 2] = FRAME[i * 2];
+      aFrame[i * 2 + 1] = FRAME[i * 2 + 1];
       aZ[i] = (r() - 0.5) * 0.7;
       aSeed[i] = r();
-      aSize[i] = 0.55 + r() * 0.7;
+      aSize[i] = 0.6 + r() * 0.75;
       aTemp[i] = r();
       aRnd[i] = r();
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(position, 3));
     g.setAttribute("aHome", new THREE.Float32BufferAttribute(aHome, 3));
-    g.setAttribute("aGlyph", new THREE.Float32BufferAttribute(aGlyph, 2));
+    g.setAttribute("aFrame", new THREE.Float32BufferAttribute(aFrame, 2));
     g.setAttribute("aZ", new THREE.Float32BufferAttribute(aZ, 1));
     g.setAttribute("aSeed", new THREE.Float32BufferAttribute(aSeed, 1));
     g.setAttribute("aSize", new THREE.Float32BufferAttribute(aSize, 1));
     g.setAttribute("aTemp", new THREE.Float32BufferAttribute(aTemp, 1));
     g.setAttribute("aRnd", new THREE.Float32BufferAttribute(aRnd, 1));
     return g;
-  }, [glyphs]);
+  }, []);
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
         uniforms: {
           uTime: { value: 0 }, uForm: { value: 0 }, uField: { value: 0 }, uRead: { value: 0 }, uAppear: { value: 0 },
-          uPulsePos: { value: 0 }, uPulseAmt: { value: 0 },
+          uOrbit: { value: 0 }, uPulsePos: { value: 0 }, uPulseAmt: { value: 0 },
           uAnchor: { value: new THREE.Vector3() }, uRight: { value: new THREE.Vector3(1, 0, 0) },
           uUp: { value: new THREE.Vector3(0, 1, 0) }, uForward: { value: new THREE.Vector3(0, 0, -1) },
         },
         vertexShader: `
-          attribute vec3 aHome; attribute vec2 aGlyph; attribute float aZ, aSeed, aSize, aTemp, aRnd;
-          uniform float uTime, uForm, uField, uRead, uPulsePos, uPulseAmt;
+          attribute vec3 aHome; attribute vec2 aFrame; attribute float aZ, aSeed, aSize, aTemp, aRnd;
+          uniform float uTime, uForm, uField, uRead, uOrbit, uPulsePos, uPulseAmt;
           uniform vec3 uAnchor, uRight, uUp, uForward;
-          varying float vB; varying float vTemp; varying float vForm;
+          varying float vB; varying float vTemp;
           void main(){
             vec3 br = vec3(sin(uTime * 0.28 + aSeed * 11.0), sin(uTime * 0.23 + aSeed * 7.0), sin(uTime * 0.18 + aSeed * 5.0));
-            float restAmt = mix(0.2, 0.035, uForm);
-            vec3 homeW = aHome + br * restAmt;
-            vec3 glyphW = uAnchor + uRight * aGlyph.x + uUp * aGlyph.y + uForward * aZ;
+            vec3 homeW = aHome + br * 0.2;
+            // the frame gently orbits, so the composition feels alive
+            float ca = cos(uOrbit), sa = sin(uOrbit);
+            vec2 fr = vec2(aFrame.x * ca - aFrame.y * sa, aFrame.x * sa + aFrame.y * ca);
+            vec3 frameW = uAnchor + uRight * fr.x + uUp * fr.y + uForward * aZ;
             float e = clamp((uForm - aRnd * 0.22) / 0.78, 0.0, 1.0);
             e = e * e * (3.0 - 2.0 * e);
-            vec3 p = mix(homeW, glyphW, e);
+            vec3 p = mix(homeW, frameW, e);
             float arc = sin(e * 3.14159265);
             p += (uRight * (aSeed - 0.5) + uUp * (aRnd - 0.5)) * arc * 0.5;
             float pulse = uPulseAmt * exp(-pow((aHome.x - uPulsePos) * 0.7, 2.0));
-            float tw = 0.9 + 0.1 * sin(uTime * 0.4 + aSeed * 6.2831);
-            // the stars never fade — as the type is forged around them they lift a
-            // touch, becoming the luminous nodes and highlights inside the letters
-            vB = (0.62 + 0.5 * uField + pulse) * tw * (1.0 + 0.35 * uRead);
-            vTemp = aTemp; vForm = uForm;
+            float tw = 0.88 + 0.12 * sin(uTime * 0.4 + aSeed * 6.2831);
+            // the stars stay full and celestial, and lift a touch as they present
+            // the question — spotlights brightening on the sculpture
+            vB = (0.62 + 0.5 * uField + pulse) * tw * (1.0 + 0.3 * uRead);
+            vTemp = aTemp;
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = aSize * mix(1.0, 0.56, uForm) * (300.0 / -mv.z);
+            gl_PointSize = aSize * mix(1.0, 0.86, uForm) * (300.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }`,
         fragmentShader: `
           precision highp float;
-          uniform float uAppear; varying float vB; varying float vTemp; varying float vForm;
+          uniform float uAppear; varying float vB; varying float vTemp;
           void main(){
             vec2 uv = gl_PointCoord - 0.5;
             float d = length(uv);
-            float core  = pow(clamp(1.0 - d / mix(0.11, 0.08, vForm), 0.0, 1.0), 1.6);
-            float inner = exp(-d * 10.0) * (1.0 - 0.35 * vForm);
-            float halo  = exp(-d * 4.0) * (1.0 - 0.82 * vForm);
-            float cross = (exp(-abs(uv.x) * 26.0) + exp(-abs(uv.y) * 26.0)) * exp(-d * 3.0) * (1.0 - 0.7 * vForm);
+            float core  = pow(clamp(1.0 - d / 0.10, 0.0, 1.0), 1.6);
+            float inner = exp(-d * 10.0);
+            float halo  = exp(-d * 4.0);
+            float cross = (exp(-abs(uv.x) * 26.0) + exp(-abs(uv.y) * 26.0)) * exp(-d * 3.0);
             float inten = core * 1.25 + inner * 0.55 + halo * 0.5 + cross * 0.2;
             inten *= smoothstep(0.5, 0.4, d);
             inten *= vB;
@@ -352,32 +332,26 @@ function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
       }),
     [],
   );
-  const lastActive = useRef(-1);
   useFrame((s) => {
-    mat.uniforms.uTime.value = s.clock.elapsedTime;
+    const t = s.clock.elapsedTime;
+    mat.uniforms.uTime.value = t;
     mat.uniforms.uForm.value = shared.form;
     mat.uniforms.uField.value = shared.field;
     mat.uniforms.uRead.value = shared.read;
     mat.uniforms.uAppear.value = shared.appear;
+    mat.uniforms.uOrbit.value = 0.055 * Math.sin(t * 0.13) * shared.form;
     mat.uniforms.uPulsePos.value = shared.pulsePos;
     mat.uniforms.uPulseAmt.value = shared.pulseAmt;
     mat.uniforms.uAnchor.value.copy(shared.anchor);
     mat.uniforms.uRight.value.copy(shared.right);
     mat.uniforms.uUp.value.copy(shared.up);
     mat.uniforms.uForward.value.copy(shared.forward);
-    if (lastActive.current !== shared.active) {
-      lastActive.current = shared.active;
-      const attr = geo.attributes.aGlyph as THREE.BufferAttribute;
-      (attr.array as Float32Array).set(glyphs[shared.active].pts);
-      attr.needsUpdate = true;
-    }
   });
-  // drawn over the type so the stars remain luminous nodes within the letters
-  return <points geometry={geo} material={mat} renderOrder={30} />;
+  return <points geometry={geo} material={mat} />;
 }
 
-/* ------------- the refined typography, risen from the constellation ------------- */
-function Words({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
+/* ------------- the typography the constellation reveals (the hero) ------------- */
+function Words({ shared }: { shared: Shared }) {
   const { camera } = useThree();
   const grp = useRef<THREE.Group>(null);
   /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -397,45 +371,47 @@ function Words({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
     const ap = shared.appear;
     const qT = shared.read * ap;
     const ansT = ansTF(shared.t) * ap;
-    // the type rises slowly from within the stars, and eases away slowly
+    // the question is uncovered slowly from the centre; nothing snaps
     qV.current += (qT - qV.current) * 0.08;
-    idxV.current += (ansT - idxV.current) * 0.06;
+    idxV.current += (qT - idxV.current) * 0.07; // the caption appears with the question
     ansV.current += (ansT - ansV.current) * 0.05;
     const q = qRef.current;
     const ix = idxRef.current;
     const a = ansRef.current;
     for (const o of [q, ix, a]) {
-      if (o && !o.__init) { o.material.depthTest = false; o.material.depthWrite = false; o.renderOrder = 22; o.__init = true; }
+      if (o && !o.__init) { o.material.depthTest = false; o.material.depthWrite = false; o.renderOrder = 24; o.__init = true; }
     }
-    if (q && Math.abs((q.__op ?? -1) - qV.current) > 0.008) {
-      q.fillOpacity = qV.current;
-      q.outlineOpacity = qV.current * 0.4;
-      q.__op = qV.current; q.sync?.();
+    if (q) {
+      q.scale.setScalar(0.965 + 0.035 * qV.current); // revealed with a gentle settle
+      if (Math.abs((q.__op ?? -1) - qV.current) > 0.008) {
+        q.fillOpacity = qV.current;
+        q.outlineOpacity = qV.current * 0.4;
+        q.__op = qV.current; q.sync?.();
+      }
     }
     if (ix && Math.abs((ix.__op ?? -1) - idxV.current) > 0.01) { ix.fillOpacity = idxV.current * 0.8; ix.__op = idxV.current; ix.sync?.(); }
     if (a) {
-      a.position.y = -2.1 - (1 - ansV.current) * 0.12;
+      a.position.y = -3.05 - (1 - ansV.current) * 0.12;
       if (Math.abs((a.__op ?? -1) - ansV.current) > 0.01) { a.fillOpacity = ansV.current; a.__op = ansV.current; a.sync?.(); }
     }
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
   const faq = FAQS[active];
-  const question = glyphs[active].lines.join("\n");
   return (
     <group ref={grp}>
-      {/* the question — crisp type, aligned exactly to the star framework */}
-      <Text ref={qRef} font={FONT_BOLD} fontSize={HEAD_FONT} color="#f2f5ff" anchorX="center" anchorY="middle"
-        textAlign="center" lineHeight={HEAD_LH} letterSpacing={-0.005}
-        outlineWidth={0} outlineBlur="7%" outlineColor="#6f86dc" outlineOpacity={0}
-        position={[0, 0, 0]} fillOpacity={0}>
-        {question}
+      {/* the question — crisp type, the hero, revealed at the centre of the frame */}
+      <Text ref={qRef} font={FONT_BOLD} fontSize={QFONT} color="#f4f7ff" anchorX="center" anchorY="middle"
+        textAlign="center" maxWidth={QWRAP} lineHeight={1.16} letterSpacing={-0.01}
+        outlineWidth={0} outlineBlur="6%" outlineColor="#6f86dc" outlineOpacity={0}
+        position={[0, 0.12, 0]} fillOpacity={0}>
+        {faq.q}
       </Text>
-      <Text ref={idxRef} font={FONT_BOLD} fontSize={0.11} color="#9fb2e8" anchorX="center" anchorY="middle"
-        letterSpacing={0.35} position={[0, -1.75, 0]} fillOpacity={0}>
+      <Text ref={idxRef} font={FONT_BOLD} fontSize={0.1} color="#9fb2e8" anchorX="center" anchorY="middle"
+        letterSpacing={0.35} position={[0, -1.32, 0]} fillOpacity={0}>
         {`0${active + 1}  /  0${N}`}
       </Text>
       <Text ref={ansRef} font={FONT_REG} fontSize={0.14} color="#cdd6ea" anchorX="center" anchorY="top"
-        textAlign="center" maxWidth={5.8} lineHeight={1.55} position={[0, -2.1, 0]} fillOpacity={0}>
+        textAlign="center" maxWidth={5.8} lineHeight={1.55} position={[0, -3.05, 0]} fillOpacity={0}>
         {faq.a}
       </Text>
     </group>
@@ -514,12 +490,6 @@ export default function ConstellationCanvas({
     up: new THREE.Vector3(0, 1, 0), forward: new THREE.Vector3(0, 0, -1), appear: 0,
   }).current;
 
-  // lay out every question once — the stars and the type share this layout
-  const glyphs = useMemo<Glyphs[]>(() => FAQS.map((f) => {
-    const lines = wrapLines(f.q);
-    return { lines, pts: sampleFromLines(lines) };
-  }), []);
-
   useEffect(() => {
     if (activeProp !== undefined) return;
     const el = ref.current;
@@ -548,8 +518,8 @@ export default function ConstellationCanvas({
         <Rig scroll={scroll} shared={shared} />
         <BackdropStars />
         <Links shared={shared} />
-        <StarField shared={shared} glyphs={glyphs} />
-        <Words shared={shared} glyphs={glyphs} />
+        <StarField shared={shared} />
+        <Words shared={shared} />
       </Canvas>
     </div>
   );
