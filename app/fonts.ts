@@ -5,6 +5,10 @@ import {
   Fraunces,
   Poppins,
   Anton,
+  Cormorant_Garamond,
+  Archivo,
+  Newsreader,
+  Barlow_Semi_Condensed,
 } from "next/font/google";
 
 // Display — architectural, modern grotesque. Big headlines.
@@ -54,5 +58,39 @@ export const anton = Anton({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-anton",
+  display: "swap",
+});
+
+// Café demo — high-contrast fine-dining serif.
+export const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+// Trade demo — strong, industrial grotesque.
+export const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+
+// Professional-services demo — refined editorial serif.
+export const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
+
+// Fitness demo — condensed athletic support face.
+export const barlow = Barlow_Semi_Condensed({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-barlow",
   display: "swap",
 });

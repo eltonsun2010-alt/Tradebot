@@ -102,12 +102,18 @@ export const PROCESS = [
 ] as const;
 
 /* Concept projects — the ones with a live demo link to /demos/*. */
-export const CONCEPTS = [
-  { title: "Modern Café", words: ["Warm", "Elegant", "Minimal"], body: "Designed to encourage bookings and showcase the dining experience.", accent: "#c65f3f", demo: "/demos/coffee" },
-  { title: "Premium Fitness Studio", words: ["Bold", "Dynamic", "Converting"], body: "Bold typography, dynamic interactions and clear calls to action — built to convert visitors into members.", accent: "#bef264", demo: "/demos/fitness" },
-  { title: "Local Trades Business", words: ["Clean", "Professional", "Direct"], body: "Clean, professional and easy to navigate — focused on generating enquiries quickly.", accent: "#f59e0b", demo: null },
-  { title: "Professional Services", words: ["Trust", "Credible", "Simple"], body: "A refined website built around trust, credibility and simplicity.", accent: "#14b8a6", demo: "/demos/dental" },
-] as const;
+export const CONCEPTS: {
+  title: string;
+  words: string[];
+  body: string;
+  accent: string;
+  demo: string | null;
+}[] = [
+  { title: "Modern Café", words: ["Warm", "Editorial", "Inviting"], body: "A cinematic, atmosphere-led café site — tabbed menu, signature plates and a warm reservation flow.", accent: "#b8542e", demo: "/demos/cafe" },
+  { title: "Premium Fitness Studio", words: ["Bold", "Kinetic", "Converting"], body: "Heavy display type, scroll-triggered stats and a live timetable — built to convert visitors into members.", accent: "#ccff33", demo: "/demos/forge" },
+  { title: "Local Trades Business", words: ["Trusted", "Professional", "Direct"], body: "An electrician's site engineered for enquiries — before/after slider, guarantees and a prominent quote form.", accent: "#f6a723", demo: "/demos/trade" },
+  { title: "Professional Services", words: ["Premium", "Minimal", "Confident"], body: "A refined wealth-advisory brand — editorial serif, generous whitespace and quiet, credible motion.", accent: "#1f5f4f", demo: "/demos/meridian" },
+];
 
 export const PRICING = [
   {
