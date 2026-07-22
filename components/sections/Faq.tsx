@@ -57,7 +57,7 @@ function FaqConstellation() {
       id="faq"
       ref={sectionRef}
       className="relative border-t border-line bg-ink"
-      style={{ height: `${N * 88 + 60}vh` }}
+      style={{ height: `${N * 132 + 80}vh` }}
     >
       <div className="sticky top-0 h-screen overflow-hidden">
         {/* the night — almost pure black, with a single faint pool of light */}
