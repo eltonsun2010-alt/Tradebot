@@ -299,7 +299,7 @@ function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
         uniforms: {
           uTime: { value: 0 }, uForm: { value: 0 }, uField: { value: 0 }, uRead: { value: 0 }, uAppear: { value: 0 },
           uPulsePos: { value: 0 }, uPulseAmt: { value: 0 },
@@ -323,11 +323,12 @@ function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
             p += (uRight * (aSeed - 0.5) + uUp * (aRnd - 0.5)) * arc * 0.5;
             float pulse = uPulseAmt * exp(-pow((aHome.x - uPulsePos) * 0.7, 2.0));
             float tw = 0.9 + 0.1 * sin(uTime * 0.4 + aSeed * 6.2831);
-            // the stars stay shining, only easing back a touch as the type rises
-            vB = (0.62 + 0.5 * uField + pulse) * tw * (1.0 - 0.28 * uRead);
+            // the stars never fade — as the type is forged around them they lift a
+            // touch, becoming the luminous nodes and highlights inside the letters
+            vB = (0.62 + 0.5 * uField + pulse) * tw * (1.0 + 0.35 * uRead);
             vTemp = aTemp; vForm = uForm;
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = aSize * mix(1.0, 0.5, uForm) * (300.0 / -mv.z);
+            gl_PointSize = aSize * mix(1.0, 0.56, uForm) * (300.0 / -mv.z);
             gl_Position = projectionMatrix * mv;
           }`,
         fragmentShader: `
@@ -371,7 +372,8 @@ function StarField({ shared, glyphs }: { shared: Shared; glyphs: Glyphs[] }) {
       attr.needsUpdate = true;
     }
   });
-  return <points geometry={geo} material={mat} />;
+  // drawn over the type so the stars remain luminous nodes within the letters
+  return <points geometry={geo} material={mat} renderOrder={30} />;
 }
 
 /* ------------- the refined typography, risen from the constellation ------------- */
