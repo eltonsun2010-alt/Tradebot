@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DemoRibbon } from "@/components/demos/DemoRibbon";
-import { Img } from "@/components/demos/Img";
 
 /* ==================================================================== *
  * Meridian Advisory — a premium wealth & financial advisory. Minimal,
@@ -19,8 +18,6 @@ const LINE = "rgba(24,26,28,0.12)";
 const ACCENT = "#1f5f4f";
 const serif = { fontFamily: "var(--font-newsreader), Georgia, serif" } as const;
 
-const lf = (k: string, lock: number) => `https://loremflickr.com/1200/1500/${k}?lock=${lock}`;
-const grad = "linear-gradient(150deg, #2c463f, #181a1c)";
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const NAV = [
@@ -97,7 +94,7 @@ export function MeridianSite() {
       <section id="about" className="mx-auto max-w-6xl px-6 py-24 md:px-10 md:py-32">
         <div className="grid gap-14 md:grid-cols-[1fr_1fr] md:gap-20">
           <Reveal>
-            <Img src={lf("architecture,minimal", 31)} alt="Meridian" fallback={grad} rounded="rounded-[2rem]" className="h-[26rem] w-full md:h-[34rem]" />
+            <div className="h-[26rem] w-full overflow-hidden rounded-[2rem] md:h-[34rem]"><MeridianScene /></div>
           </Reveal>
           <Reveal i={1} className="flex flex-col justify-center">
             <span className="text-[0.72rem] font-medium uppercase tracking-[0.28em]" style={{ color: ACCENT }}>Who we are</span>
@@ -230,6 +227,38 @@ export function MeridianSite() {
         </div>
       </footer>
     </div>
+  );
+}
+
+/* A restrained architectural line study in place of unverifiable stock — a calm,
+   premium image that always renders, in the house evergreen and ink. */
+function MeridianScene() {
+  return (
+    <svg viewBox="0 0 520 680" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="mrBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2b4a41" /><stop offset="1" stopColor="#151b1c" /></linearGradient>
+      </defs>
+      <rect width="520" height="680" fill="url(#mrBg)" />
+      {/* faint moon */}
+      <circle cx="120" cy="130" r="46" fill="#e9e4d6" opacity="0.10" />
+      {/* two refined towers, fine window grid */}
+      <g stroke="#e9e4d6" strokeOpacity="0.16" strokeWidth="1.5" fill="none">
+        <rect x="150" y="150" width="150" height="530" />
+        <rect x="322" y="250" width="120" height="430" />
+        {Array.from({ length: 12 }).map((_, r) => (<line key={`a${r}`} x1="150" y1={186 + r * 42} x2="300" y2={186 + r * 42} />))}
+        {Array.from({ length: 3 }).map((_, c) => (<line key={`av${c}`} x1={188 + c * 38} y1="150" x2={188 + c * 38} y2="680" />))}
+        {Array.from({ length: 9 }).map((_, r) => (<line key={`b${r}`} x1="322" y1={286 + r * 42} x2="442" y2={286 + r * 42} />))}
+        {Array.from({ length: 2 }).map((_, c) => (<line key={`bv${c}`} x1={362 + c * 40} y1="250" x2={362 + c * 40} y2="680" />))}
+      </g>
+      {/* lit windows — a few evergreen/gold accents */}
+      <g fill="#c9b06a" opacity="0.5">
+        <rect x="189" y="228" width="36" height="30" /><rect x="227" y="354" width="36" height="30" /><rect x="151" y="480" width="36" height="30" />
+      </g>
+      <g fill="#1f5f4f" opacity="0.55"><rect x="363" y="328" width="38" height="30" /><rect x="403" y="454" width="38" height="30" /></g>
+      {/* thin accent line + horizon */}
+      <line x1="60" y1="620" x2="460" y2="620" stroke="#e9e4d6" strokeOpacity="0.14" strokeWidth="1.5" />
+      <rect x="60" y="150" width="4" height="470" fill="#1f5f4f" opacity="0.6" />
+    </svg>
   );
 }
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useMotionValue, animate, useScroll, useTransform } from "framer-motion";
-import { Img } from "@/components/demos/Img";
 import { DemoRibbon } from "@/components/demos/DemoRibbon";
 
 /* ==================================================================== *
@@ -19,7 +18,6 @@ const SUB = "#a3a3ad";
 const display = { fontFamily: "var(--font-anton), Impact, sans-serif" } as const;
 const cond = { fontFamily: "var(--font-barlow), sans-serif" } as const;
 
-const lf = (k: string, lock: number) => `https://loremflickr.com/1200/1400/${k}?lock=${lock}`;
 const grad = "linear-gradient(150deg, #2a2d16, #0b0b0d)";
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -92,7 +90,7 @@ export function ForgeSite() {
       <section id="top" ref={heroRef} className="relative min-h-[100svh] overflow-hidden pt-24">
         <motion.div style={{ y: imgY }} className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0" style={{ background: grad }} />
-          <img src={lf("gym,barbell", 61)} alt="" className="h-full w-full object-cover opacity-40" onError={(e) => (e.currentTarget.style.display = "none")} />
+          <HeroGraphic />
           <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(11,11,13,0.95) 0%, rgba(11,11,13,0.5) 55%, rgba(11,11,13,0.85) 100%)" }} />
         </motion.div>
 
@@ -204,9 +202,9 @@ export function ForgeSite() {
           {COACHES.map((co, i) => (
             <Reveal key={co.name} i={i}>
               <div className="group">
-                <div className="relative overflow-hidden rounded-2xl">
-                  <Img src={lf(co.k, co.lock)} alt={co.name} fallback={grad} rounded="rounded-2xl" className="h-72 w-full grayscale transition-all duration-500 group-hover:grayscale-0" />
-                  <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(180deg, transparent, rgba(11,11,13,0.9))" }} />
+                <div className="relative h-72 overflow-hidden rounded-2xl">
+                  <CoachTile disc={co.disc} i={i} />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24" style={{ background: "linear-gradient(180deg, transparent, rgba(11,11,13,0.9))" }} />
                 </div>
                 <h3 className="mt-4 text-2xl uppercase" style={display}>{co.name}</h3>
                 <p className="text-sm font-semibold uppercase tracking-wider" style={{ color: VOLT, ...cond }}>{co.role}</p>
@@ -225,7 +223,9 @@ export function ForgeSite() {
             <p className="mt-6 text-sm font-bold uppercase tracking-wider" style={{ color: SUB, ...cond }}>Maya R. · Member since 2023</p>
           </Reveal>
           <Reveal i={1}>
-            <Img src={lf("woman,gym", 66)} alt="Success story" fallback={grad} rounded="rounded-2xl" className="h-80 w-full md:h-96" />
+            <div className="h-80 w-full overflow-hidden rounded-2xl md:h-96">
+              <DeadliftScene />
+            </div>
           </Reveal>
         </div>
       </section>
@@ -247,6 +247,153 @@ export function ForgeSite() {
   );
 }
 
+/* ------------------------- FORGE bespoke artwork ------------------------- */
+// Controlled, on-brand vector art in place of unverifiable stock photos — bold,
+// energetic, black + volt. Every subject is exactly right, on every load.
+const anton = { fontFamily: "var(--font-anton), Impact, sans-serif" } as const;
+
+function HeroGraphic() {
+  return (
+    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full opacity-90" aria-hidden>
+      <defs>
+        <pattern id="fgHalftone" width="26" height="26" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="2.4" fill="#ccff33" opacity="0.10" />
+        </pattern>
+      </defs>
+      <rect width="1440" height="900" fill="url(#fgHalftone)" />
+      {/* bold diagonal energy streaks, right side */}
+      <g opacity="0.16">
+        <polygon points="900,0 1040,0 720,900 580,900" fill="#ccff33" />
+        <polygon points="1120,0 1180,0 900,900 840,900" fill="#ccff33" />
+      </g>
+      {/* a large loaded barbell, receding right */}
+      <g transform="translate(1050 470)" opacity="0.9">
+        <rect x="-360" y="-14" width="720" height="28" rx="14" fill="#20222a" />
+        <g fill="#2a2d16" stroke="#ccff33" strokeWidth="4">
+          <circle cx="-250" cy="0" r="120" /><circle cx="250" cy="0" r="120" />
+        </g>
+        <g fill="#171a10" stroke="#ccff33" strokeWidth="3">
+          <circle cx="-250" cy="0" r="150" opacity="0.35" /><circle cx="250" cy="0" r="150" opacity="0.35" />
+        </g>
+        <rect x="-330" y="-20" width="26" height="40" rx="4" fill="#33361c" />
+        <rect x="304" y="-20" width="26" height="40" rx="4" fill="#33361c" />
+      </g>
+    </svg>
+  );
+}
+
+function DiscGlyph({ disc }: { disc: string }) {
+  const V = "#ccff33";
+  if (disc === "kettlebell") {
+    return (
+      <g>
+        <path d="M138 150 a22 22 0 0 1 44 0" fill="none" stroke={V} strokeWidth="13" strokeLinecap="round" />
+        <circle cx="160" cy="172" r="42" fill={V} />
+        <circle cx="160" cy="176" r="13" fill="#141417" />
+      </g>
+    );
+  }
+  if (disc === "olympic") {
+    return (
+      <g fill={V}>
+        <rect x="66" y="150" width="188" height="12" rx="6" />
+        <rect x="80" y="128" width="18" height="56" rx="5" /><rect x="62" y="136" width="13" height="40" rx="4" />
+        <rect x="222" y="128" width="18" height="56" rx="5" /><rect x="245" y="136" width="13" height="40" rx="4" />
+        <g opacity="0.9">
+          <path d="M132 118 l 28 -22 l 28 22" fill="none" stroke={V} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M132 96 l 28 -22 l 28 22" fill="none" stroke={V} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+        </g>
+      </g>
+    );
+  }
+  if (disc === "sled") {
+    return (
+      <g>
+        <g fill={V}>
+          <path d="M104 182 L236 182 L216 158 L124 158 Z" />
+          <rect x="150" y="98" width="12" height="64" rx="4" />
+          <rect x="128" y="94" width="56" height="12" rx="6" />
+        </g>
+        <g stroke={V} strokeWidth="7" strokeLinecap="round" opacity="0.85">
+          <line x1="58" y1="150" x2="96" y2="150" /><line x1="48" y1="172" x2="92" y2="172" /><line x1="60" y1="194" x2="98" y2="194" />
+        </g>
+      </g>
+    );
+  }
+  // barbell (default / strength)
+  return (
+    <g fill={V}>
+      <rect x="60" y="150" width="200" height="12" rx="6" />
+      <rect x="80" y="124" width="18" height="64" rx="5" /><rect x="60" y="134" width="13" height="44" rx="4" />
+      <rect x="222" y="124" width="18" height="64" rx="5" /><rect x="247" y="134" width="13" height="44" rx="4" />
+    </g>
+  );
+}
+
+function CoachTile({ disc, i }: { disc: string; i: number }) {
+  const gid = `fgCoach${i}`;
+  return (
+    <svg viewBox="0 0 320 300" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105" aria-hidden>
+      <defs>
+        <linearGradient id={`${gid}bg`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#191b20" /><stop offset="1" stopColor="#0c0c0e" />
+        </linearGradient>
+        <pattern id={`${gid}dots`} width="15" height="15" patternUnits="userSpaceOnUse">
+          <circle cx="3" cy="3" r="1.5" fill="#ccff33" opacity="0.10" />
+        </pattern>
+      </defs>
+      <rect width="320" height="300" fill={`url(#${gid}bg)`} />
+      <rect width="320" height="300" fill={`url(#${gid}dots)`} />
+      {/* volt corner wedge */}
+      <polygon points="0,300 130,300 0,190" fill="#ccff33" opacity="0.14" />
+      {/* big index */}
+      <text x="24" y="86" style={anton} fontSize="86" fill="#ccff33" opacity="0.16">{String(i + 1).padStart(2, "0")}</text>
+      {/* discipline glyph */}
+      <DiscGlyph disc={disc} />
+    </svg>
+  );
+}
+
+function DeadliftScene() {
+  return (
+    <svg viewBox="0 0 640 480" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="fgDl" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#17181c" /><stop offset="1" stopColor="#0b0b0d" />
+        </linearGradient>
+        <pattern id="fgDlDots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="2" fill="#ccff33" opacity="0.08" />
+        </pattern>
+      </defs>
+      <rect width="640" height="480" fill="url(#fgDl)" />
+      <rect width="640" height="480" fill="url(#fgDlDots)" />
+      <polygon points="0,480 220,480 60,0 0,0" fill="#ccff33" opacity="0.06" />
+      {/* platform */}
+      <rect x="60" y="330" width="520" height="10" rx="4" fill="#2a2d33" />
+      {/* loaded barbell */}
+      <g>
+        <rect x="150" y="252" width="340" height="16" rx="8" fill="#c9ced6" />
+        <g fill="#2a2d16" stroke="#ccff33" strokeWidth="5">
+          <circle cx="205" cy="260" r="66" /><circle cx="435" cy="260" r="66" />
+        </g>
+        <g fill="#0f1109"><circle cx="205" cy="260" r="16" /><circle cx="435" cy="260" r="16" /></g>
+        <rect x="256" y="248" width="20" height="24" rx="4" fill="#3a3f22" />
+        <rect x="364" y="248" width="20" height="24" rx="4" fill="#3a3f22" />
+      </g>
+      {/* PR flash */}
+      <g transform="translate(510 120)">
+        <circle r="52" fill="#ccff33" />
+        <text x="0" y="-2" textAnchor="middle" style={anton} fontSize="30" fill="#0b0b0d">PR</text>
+        <text x="0" y="24" textAnchor="middle" style={{ fontFamily: "var(--font-barlow), sans-serif" }} fontSize="12" fontWeight="700" fill="#0b0b0d">2× BW</text>
+      </g>
+      {/* up energy chevrons */}
+      <g fill="none" stroke="#ccff33" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" opacity="0.8">
+        <path d="M300 180 l20 -20 l20 20" /><path d="M300 150 l20 -20 l20 20" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
 const PLANS = [
   { name: "Flex", price: 29, per: "wk", featured: false, perks: ["8 classes / month", "Full gym floor access", "App workout tracking", "Cancel anytime"] },
   { name: "Unlimited", price: 44, per: "wk", featured: true, perks: ["Unlimited classes", "Open gym 24/7", "Monthly InBody scan", "Nutrition guidance", "Bring-a-friend Fridays"] },
@@ -261,8 +408,8 @@ const TIMETABLE = [
 ];
 
 const COACHES = [
-  { name: "Deniz K.", role: "Head Strength", k: "trainer,gym,man", lock: 51 },
-  { name: "Amara O.", role: "Conditioning", k: "trainer,fitness,woman", lock: 52 },
-  { name: "Kai T.", role: "Olympic Lifting", k: "weightlifting,gym", lock: 53 },
-  { name: "Sol M.", role: "Hyrox Coach", k: "athlete,running", lock: 54 },
-];
+  { name: "Deniz K.", role: "Head Strength", disc: "barbell" },
+  { name: "Amara O.", role: "Conditioning", disc: "kettlebell" },
+  { name: "Kai T.", role: "Olympic Lifting", disc: "olympic" },
+  { name: "Sol M.", role: "Hyrox Coach", disc: "sled" },
+] as const;
