@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Img } from "@/components/demos/Img";
 import { DemoRibbon } from "@/components/demos/DemoRibbon";
 
 /* ==================================================================== *
@@ -20,7 +19,6 @@ const INK = "#15222f";
 const SUB = "#5b6b7b";
 const sans = { fontFamily: "var(--font-archivo), system-ui, sans-serif" } as const;
 
-const lf = (k: string, lock: number) => `https://loremflickr.com/1200/900/${k}?lock=${lock}`;
 const grad = "linear-gradient(150deg, #1f4c72, #0a1f33)";
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -97,8 +95,8 @@ export function TradeSite() {
               ))}
             </div>
           </div>
-          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2, ease }}>
-            <Img src={lf("electrician,work", 41)} alt="Northgate electrician at work" fallback={grad} rounded="rounded-3xl" className="h-80 w-full md:h-[30rem]" priority />
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2, ease }} className="h-80 w-full overflow-hidden rounded-3xl md:h-[30rem]">
+            <HeroInstallScene />
           </motion.div>
         </div>
       </section>
@@ -137,7 +135,7 @@ export function TradeSite() {
             {PROJECTS.map((p, i) => (
               <Reveal key={p.t} i={i}>
                 <div className="overflow-hidden rounded-2xl bg-white/5">
-                  <Img src={lf(p.k, p.lock)} alt={p.t} fallback={grad} rounded="rounded-none" className="h-44 w-full" />
+                  <div className="h-44 w-full"><ProjectScene kind={p.scene} /></div>
                   <div className="p-4"><h4 className="font-bold text-white">{p.t}</h4><p className="text-sm text-slate-400">{p.loc}</p></div>
                 </div>
               </Reveal>
@@ -244,6 +242,137 @@ export function TradeSite() {
 }
 
 /* --------------------------- before / after --------------------------- */
+/* ------------------------- Northgate bespoke artwork ------------------------- */
+// Controlled, on-brand technical illustrations in place of unverifiable stock —
+// every scene shows the exact service, navy + safety amber, on every load.
+function TradeGrid({ id }: { id: string }) {
+  return (
+    <>
+      <pattern id={id} width="34" height="34" patternUnits="userSpaceOnUse">
+        <path d="M34 0H0V34" fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.06" />
+      </pattern>
+    </>
+  );
+}
+
+function HeroInstallScene() {
+  return (
+    <svg viewBox="0 0 520 640" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="ntHero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#123a5e" /><stop offset="1" stopColor="#0a1f33" /></linearGradient>
+        <TradeGrid id="ntHeroGrid" />
+      </defs>
+      <rect width="520" height="640" fill="url(#ntHero)" />
+      <rect width="520" height="640" fill="url(#ntHeroGrid)" />
+      {/* certification badge */}
+      <g transform="translate(440 92)">
+        <circle r="40" fill="#f6a723" />
+        <path d="M-16 2 L-4 15 L18 -13" fill="none" stroke="#0a1f33" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+      {/* modern consumer unit */}
+      <g transform="translate(70 150)">
+        <rect x="6" y="8" width="380" height="150" rx="12" fill="#000" opacity="0.18" />
+        <rect x="0" y="0" width="380" height="146" rx="12" fill="#ffffff" />
+        <rect x="16" y="16" width="348" height="114" rx="8" fill="#f5f8fb" stroke="#e3e9f0" strokeWidth="2" />
+        <rect x="30" y="72" width="320" height="6" rx="2" fill="#b7c1cc" />
+        <rect x="34" y="44" width="34" height="74" rx="4" fill="#fff" stroke="#cdd6df" strokeWidth="2" />
+        <rect x="45" y="52" width="12" height="24" rx="3" fill="#f6a723" />
+        {Array.from({ length: 8 }).map((_, i) => (
+          <g key={i}>
+            <rect x={84 + i * 33} y="46" width="24" height="70" rx="4" fill="#fff" stroke="#cdd6df" strokeWidth="2" />
+            <rect x={90 + i * 33} y="54" width="12" height="22" rx="3" fill="#0e2942" />
+          </g>
+        ))}
+      </g>
+      {/* dressed cables descending */}
+      <g fill="none" strokeWidth="7" strokeLinecap="round">
+        <path d="M150 296 L150 380" stroke="#8a5a2a" /><path d="M172 296 L172 380" stroke="#2f66b0" /><path d="M194 296 L194 380" stroke="#a7b52a" />
+      </g>
+      <rect x="140" y="352" width="64" height="12" rx="4" fill="#0a1f33" stroke="#274b6b" strokeWidth="2" />
+      {/* double socket */}
+      <g transform="translate(96 430)">
+        <rect width="128" height="96" rx="10" fill="#fff" /><rect x="10" y="10" width="108" height="76" rx="8" fill="#eef3f8" />
+        <g fill="#0e2942"><rect x="30" y="34" width="8" height="18" rx="2" /><rect x="46" y="34" width="8" height="18" rx="2" /><rect x="38" y="58" width="8" height="10" rx="2" />
+          <rect x="78" y="34" width="8" height="18" rx="2" /><rect x="94" y="34" width="8" height="18" rx="2" /><rect x="86" y="58" width="8" height="10" rx="2" /></g>
+      </g>
+      {/* screwdriver tool */}
+      <g transform="translate(300 430) rotate(24)">
+        <rect x="0" y="0" width="16" height="90" rx="6" fill="#f6a723" />
+        <rect x="4" y="88" width="8" height="70" rx="3" fill="#c9ced6" />
+        <rect x="4" y="150" width="8" height="14" fill="#8a97a5" />
+      </g>
+    </svg>
+  );
+}
+
+function ProjectScene({ kind }: { kind: string }) {
+  if (kind === "lighting") {
+    return (
+      <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+        <defs><linearGradient id="ntLight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1c150c" /><stop offset="1" stopColor="#0f0b06" /></linearGradient>
+          <radialGradient id="ntCone" cx="50%" cy="0%" r="80%"><stop offset="0" stopColor="#ffcf7a" stopOpacity="0.85" /><stop offset="1" stopColor="#ffcf7a" stopOpacity="0" /></radialGradient></defs>
+        <rect width="400" height="220" fill="url(#ntLight)" />
+        <rect x="0" y="26" width="400" height="14" fill="#2a2016" />
+        {[80, 200, 320].map((x) => (
+          <g key={x}>
+            <circle cx={x} cy="33" r="12" fill="#fff6e0" /><circle cx={x} cy="33" r="12" fill="none" stroke="#c9a24a" strokeWidth="3" />
+            <polygon points={`${x - 46},210 ${x + 46},210 ${x + 13},44 ${x - 13},44`} fill="url(#ntCone)" />
+          </g>
+        ))}
+        <rect x="0" y="196" width="400" height="24" fill="#2b2f36" />
+      </svg>
+    );
+  }
+  if (kind === "ev") {
+    return (
+      <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+        <defs><linearGradient id="ntEv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#dbe6f0" /><stop offset="1" stopColor="#c3d0dd" /></linearGradient></defs>
+        <rect width="400" height="220" fill="url(#ntEv)" />
+        <rect x="0" y="168" width="400" height="52" fill="#9fb0c0" />
+        {/* wallbox charger */}
+        <g transform="translate(40 66)">
+          <rect width="66" height="96" rx="12" fill="#0e2942" />
+          <rect x="12" y="14" width="42" height="30" rx="5" fill="#f6a723" />
+          <g fill="#0a1f33"><rect x="18" y="22" width="30" height="5" rx="2" /><rect x="18" y="31" width="20" height="5" rx="2" /></g>
+          <circle cx="33" cy="68" r="9" fill="#173a5c" /><circle cx="33" cy="68" r="4" fill="#9fe3ff" />
+        </g>
+        {/* charging cable */}
+        <path d="M106 150 C 150 190, 210 190, 250 156" fill="none" stroke="#0e2942" strokeWidth="8" strokeLinecap="round" />
+        {/* car */}
+        <g transform="translate(230 96)">
+          <path d="M8 64 L26 30 C32 20 42 16 54 16 L120 16 C134 16 146 22 156 34 L172 56 L172 78 L8 78 Z" fill="#20527e" />
+          <path d="M40 30 L58 30 L58 52 L28 52 Z" fill="#bcd6ec" /><path d="M66 30 L104 30 L104 52 L66 52 Z" fill="#bcd6ec" />
+          <circle cx="46" cy="80" r="16" fill="#12212e" /><circle cx="46" cy="80" r="7" fill="#5b6b7b" />
+          <circle cx="140" cy="80" r="16" fill="#12212e" /><circle cx="140" cy="80" r="7" fill="#5b6b7b" />
+          {/* charge port + amber pulse */}
+          <circle cx="10" cy="52" r="7" fill="#f6a723" />
+        </g>
+      </svg>
+    );
+  }
+  // rewire
+  return (
+    <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      <defs><linearGradient id="ntRw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#123a5e" /><stop offset="1" stopColor="#0a1f33" /></linearGradient></defs>
+      <rect width="400" height="220" fill="url(#ntRw)" />
+      {/* stud framing */}
+      <g stroke="#ffffff" strokeWidth="2" opacity="0.09"><line x1="120" y1="0" x2="120" y2="220" /><line x1="280" y1="0" x2="280" y2="220" /><line x1="0" y1="70" x2="400" y2="70" /></g>
+      {/* junction box */}
+      <rect x="176" y="86" width="48" height="48" rx="6" fill="#eef2f6" stroke="#f6a723" strokeWidth="3" />
+      <circle cx="200" cy="110" r="7" fill="#0e2942" />
+      {/* neat routed cables into the box */}
+      <g fill="none" strokeWidth="7" strokeLinecap="round">
+        <path d="M40 40 L120 40 L176 96" stroke="#b23b2e" />
+        <path d="M40 180 L150 180 L176 124" stroke="#2f66b0" />
+        <path d="M360 44 L280 44 L224 96" stroke="#a7b52a" />
+        <path d="M360 184 L250 184 L224 124" stroke="#e8edf2" opacity="0.85" />
+      </g>
+      {/* cable clips */}
+      <g fill="#f6a723"><rect x="112" y="34" width="12" height="12" rx="2" /><rect x="276" y="38" width="12" height="12" rx="2" /><rect x="144" y="174" width="12" height="12" rx="2" /></g>
+    </svg>
+  );
+}
+
 /* The BEFORE state — a dangerous, outdated rewireable fuse board: dim, grimy,
    ceramic fuses (one pulled out over a scorched socket), tangled cabling and a
    warning. The problem reads instantly, no text required. */
@@ -458,10 +587,10 @@ const SERVICES = [
 ];
 
 const PROJECTS = [
-  { t: "Full house rewire", loc: "Elmwood · 3-bed semi", k: "cables,wiring", lock: 42 },
-  { t: "Kitchen lighting", loc: "Riverside · new build", k: "kitchen,lighting", lock: 43 },
-  { t: "EV charger fit", loc: "Northgate · driveway", k: "electric,car", lock: 44 },
-];
+  { t: "Full house rewire", loc: "Elmwood · 3-bed semi", scene: "rewire" },
+  { t: "Kitchen lighting", loc: "Riverside · new build", scene: "lighting" },
+  { t: "EV charger fit", loc: "Northgate · driveway", scene: "ev" },
+] as const;
 
 const WHY = [
   { stat: "4.9★", t: "Rated by locals", body: "300+ reviews across Google and Checkatrade from homeowners just like you." },

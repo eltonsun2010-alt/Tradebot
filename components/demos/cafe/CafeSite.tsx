@@ -1,9 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { motion, useScroll, useTransform, type Variants } from "framer-motion";
-import { Img } from "@/components/demos/Img";
 import { DemoRibbon } from "@/components/demos/DemoRibbon";
 
 /* ==================================================================== *
@@ -21,9 +19,7 @@ const CLAY = "#b8542e";
 const OLIVE = "#6c6a43";
 const serif = { fontFamily: "var(--font-cormorant), Georgia, serif" } as const;
 
-const lf = (k: string, lock: number) => `https://loremflickr.com/1100/1400/${k}?lock=${lock}`;
 const grad = "linear-gradient(150deg, #c98a5b, #2a1a10)";
-const gradSoft = "linear-gradient(150deg, #e5c8a6, #a07f56)";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 const rise: Variants = {
@@ -98,7 +94,7 @@ export function CafeSite() {
       {/* ── Cinematic hero ── */}
       <section id="top" ref={heroRef} className="relative h-[100svh] w-full overflow-hidden">
         <motion.div style={{ y: heroY, scale: heroScale, background: grad }} className="absolute inset-0">
-          <img src={lf("barista,espresso", 71)} alt="" className="h-full w-full object-cover opacity-90" onError={(e) => ((e.currentTarget.style.display = "none"))} />
+          <CafeArt kind="hero" />
         </motion.div>
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(20,12,7,0.55) 0%, rgba(20,12,7,0.15) 35%, rgba(20,12,7,0.65) 100%)" }} />
         <motion.div style={{ opacity: heroFade }} className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-end px-6 pb-[12vh] md:px-10">
@@ -162,16 +158,18 @@ export function CafeSite() {
         </Reveal>
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {[
-            { k: "cafe,interior", h: "h-72 md:h-96", span: "md:row-span-2", lock: 81 },
-            { k: "coffee,latte", h: "h-40 md:h-44", span: "", lock: 82 },
-            { k: "croissant,bakery", h: "h-40 md:h-44", span: "", lock: 83 },
-            { k: "brunch,table", h: "h-40 md:h-48", span: "md:col-span-2", lock: 84 },
-            { k: "coffee,beans", h: "h-52 md:h-60", span: "", lock: 85 },
-            { k: "barista,cafe", h: "h-52 md:h-60", span: "", lock: 86 },
-            { k: "patisserie,cake", h: "h-52 md:h-60", span: "md:col-span-2", lock: 87 },
+            { kind: "interior", h: "h-72 md:h-96", span: "md:row-span-2" },
+            { kind: "latte", h: "h-40 md:h-44", span: "" },
+            { kind: "croissant", h: "h-40 md:h-44", span: "" },
+            { kind: "brunch", h: "h-40 md:h-48", span: "md:col-span-2" },
+            { kind: "beans", h: "h-52 md:h-60", span: "" },
+            { kind: "barista", h: "h-52 md:h-60", span: "" },
+            { kind: "cake", h: "h-52 md:h-60", span: "md:col-span-2" },
           ].map((g) => (
-            <div key={g.lock} className={`group relative overflow-hidden rounded-2xl ${g.span}`}>
-              <Img src={lf(g.k, g.lock)} alt="Aurelia" fallback={gradSoft} rounded="rounded-2xl" className={`${g.h} w-full transition-transform duration-700 group-hover:scale-105`} />
+            <div key={g.kind} className={`group relative overflow-hidden rounded-2xl ${g.span}`}>
+              <div className={`${g.h} w-full transition-transform duration-700 group-hover:scale-105`}>
+                <CafeArt kind={g.kind} />
+              </div>
             </div>
           ))}
         </div>
@@ -206,7 +204,7 @@ export function CafeSite() {
 
           <Reveal i={1}>
             <div className="overflow-hidden rounded-3xl" style={{ border: "1px solid rgba(42,26,16,0.12)" }}>
-              <Img src={lf("cafe,storefront", 88)} alt="Aurelia storefront" fallback={grad} rounded="rounded-none" className="h-56 w-full" />
+              <div className="h-56 w-full"><CafeArt kind="storefront" /></div>
               <div className="p-8" style={{ background: CREAM }}>
                 <h3 className="text-2xl" style={{ ...serif, fontWeight: 600 }}>Find us</h3>
                 <p className="mt-3 leading-relaxed" style={{ color: SUB }}>128 Vine Street, corner of Maple<br />Riverside District</p>
@@ -318,16 +316,235 @@ function MenuSection() {
 }
 
 const SIGNATURES = [
-  { name: "The Aurelia Board", note: "Whipped ricotta, honeycomb, stone fruit and warm sourdough — made to share, slowly.", k: "brunch,board", lock: 91, tag: "House favourite" },
-  { name: "Saffron Croissant", note: "Our three-day laminated croissant, glazed in saffron and finished with candied orange.", k: "croissant,pastry", lock: 92, tag: "Bakery" },
-  { name: "Barrel-Aged Cold Brew", note: "Steeped 18 hours, rested in oak. Notes of dark cocoa, fig and a whisper of vanilla.", k: "coffee,iced", lock: 93, tag: "Coffee bar" },
-];
+  { name: "The Aurelia Board", note: "Whipped ricotta, honeycomb, stone fruit and warm sourdough — made to share, slowly.", kind: "board", tag: "House favourite" },
+  { name: "Saffron Croissant", note: "Our three-day laminated croissant, glazed in saffron and finished with candied orange.", kind: "saffron", tag: "Bakery" },
+  { name: "Barrel-Aged Cold Brew", note: "Steeped 18 hours, rested in oak. Notes of dark cocoa, fig and a whisper of vanilla.", kind: "coldbrew", tag: "Coffee bar" },
+] as const;
+
+/* ------------------------- Café Aurelia bespoke artwork ------------------------- */
+// Warm editorial illustrations in place of unverifiable stock photos — every
+// plate matches the menu item it sits beside, in the house palette, every load.
+const C = {
+  cream: "#f4ede0", sand: "#e7d4b6", milk: "#f9f2e6", clay: "#b8542e", terra: "#cf7a4f",
+  peach: "#f0c39a", olive: "#7d7a4e", espresso: "#3a2416", deep: "#2a1a10", gold: "#d99a4e", ink: "#2a1a10",
+};
+
+export function CafeArt({ kind }: { kind: string }) {
+  const box = (w: number, h: number, children: React.ReactNode, bg = C.cream) => (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden>
+      <rect width={w} height={h} fill={bg} />
+      {children}
+    </svg>
+  );
+
+  if (kind === "hero") {
+    return box(1440, 900, (
+      <>
+        <defs><linearGradient id="cfHero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d8b184" /><stop offset="0.55" stopColor="#a9743f" /><stop offset="1" stopColor="#4a2f1c" /></linearGradient></defs>
+        <rect width="1440" height="900" fill="url(#cfHero)" />
+        {/* pendant lamps */}
+        {[420, 720, 1020].map((x) => (<g key={x}><line x1={x} y1="0" x2={x} y2="150" stroke="#2a1a10" strokeWidth="4" /><circle cx={x} cy="176" r="30" fill="#2a1a10" /><circle cx={x} cy="182" r="20" fill="#ffd9a0" opacity="0.9" /><ellipse cx={x} cy="230" rx="120" ry="90" fill="#ffdca6" opacity="0.14" /></g>))}
+        {/* back shelf with jars */}
+        <rect x="120" y="330" width="1200" height="10" fill="#3a2416" opacity="0.5" />
+        {[180, 260, 340, 1060, 1140, 1220].map((x, i) => (<rect key={x} x={x} y={286 - (i % 2) * 8} width="46" height="52" rx="6" fill="#e7d4b6" opacity="0.5" />))}
+        {/* counter */}
+        <rect x="0" y="560" width="1440" height="340" fill="#3a2416" />
+        <rect x="0" y="560" width="1440" height="14" fill="#5a3a22" />
+        {/* espresso machine */}
+        <g transform="translate(520 430)"><rect width="360" height="130" rx="12" fill="#c9873f" /><rect y="-40" width="360" height="46" rx="8" fill="#a5692c" /><g fill="#3a2416"><rect x="60" y="96" width="40" height="40" rx="4" /><rect x="260" y="96" width="40" height="40" rx="4" /></g><circle cx="180" cy="40" r="16" fill="#f4ede0" /></g>
+        {/* a cup with steam on the counter */}
+        <g transform="translate(1050 590)"><path d="M0 20 h96 v34 a48 48 0 0 1 -96 0 z" fill="#f4ede0" /><path d="M96 26 a20 20 0 0 1 0 40" fill="none" stroke="#f4ede0" strokeWidth="9" /><ellipse cx="48" cy="20" rx="48" ry="12" fill="#6f4a2c" /><g stroke="#f4ede0" strokeWidth="5" strokeLinecap="round" opacity="0.5" fill="none"><path d="M34 4 q -10 -18 4 -34" /><path d="M62 4 q -10 -18 4 -34" /></g></g>
+      </>
+    ));
+  }
+
+  if (kind === "interior") {
+    return box(320, 600, (
+      <>
+        <rect width="320" height="600" fill={C.sand} />
+        {/* arched window with warm light */}
+        <path d="M60 120 a100 100 0 0 1 200 0 v240 H60 Z" fill={C.milk} />
+        <path d="M60 120 a100 100 0 0 1 200 0 v240 H60 Z" fill="none" stroke={C.espresso} strokeWidth="6" />
+        <line x1="160" y1="26" x2="160" y2="360" stroke={C.espresso} strokeWidth="5" /><line x1="60" y1="200" x2="260" y2="200" stroke={C.espresso} strokeWidth="5" />
+        {/* plant */}
+        <g transform="translate(250 372)"><rect x="-22" y="0" width="44" height="40" rx="6" fill={C.clay} /><g fill={C.olive}><path d="M0 0 q -34 -46 -8 -84 q 22 34 8 84" /><path d="M0 0 q 34 -40 12 -80 q -20 30 -12 80" /><path d="M0 0 q 4 -54 -2 -74 q 8 30 2 74" /></g></g>
+        {/* round table + cup */}
+        <ellipse cx="150" cy="470" rx="120" ry="26" fill={C.espresso} />
+        <rect x="140" y="470" width="20" height="90" fill={C.deep} />
+        <g transform="translate(120 440)"><path d="M0 8 h60 v18 a30 30 0 0 1 -60 0 z" fill={C.cream} /><ellipse cx="30" cy="8" rx="30" ry="7" fill="#6f4a2c" /></g>
+      </>
+    ));
+  }
+
+  if (kind === "latte") {
+    return box(300, 300, (
+      <>
+        <rect width="300" height="300" fill={C.peach} />
+        <circle cx="150" cy="150" r="104" fill={C.milk} />
+        <circle cx="150" cy="150" r="86" fill="#8a5a34" />
+        {/* leaf latte art */}
+        <g fill={C.milk} opacity="0.92"><path d="M150 92 C 138 120 138 150 150 208 C 162 150 162 120 150 92 Z" /><g><path d="M150 120 q -26 6 -34 22 q 22 -2 34 -12 Z" /><path d="M150 138 q -22 6 -30 20 q 20 -2 30 -10 Z" /><path d="M150 120 q 26 6 34 22 q -22 -2 -34 -12 Z" /><path d="M150 138 q 22 6 30 20 q -20 -2 -30 -10 Z" /></g></g>
+      </>
+    ), C.peach);
+  }
+
+  if (kind === "croissant" || kind === "saffron") {
+    const glaze = kind === "saffron";
+    return box(300, 300, (
+      <>
+        <rect width="300" height="300" fill={glaze ? "#efe0c4" : C.cream} />
+        <ellipse cx="150" cy="200" rx="120" ry="26" fill="#00000010" />
+        <g transform="translate(150 160)">
+          <path d="M-96 24 C -70 -26 -30 -34 0 -30 C 30 -34 70 -26 96 24 C 60 12 40 22 30 4 C 22 20 8 20 0 6 C -8 20 -22 20 -30 4 C -40 22 -60 12 -96 24 Z" fill={glaze ? C.gold : "#c98a44"} stroke={C.espresso} strokeWidth="3" />
+          <g stroke={C.espresso} strokeWidth="2" opacity="0.4" fill="none"><path d="M-60 6 q 6 8 2 16" /><path d="M-30 -8 q 6 10 2 18" /><path d="M0 -14 v20" /><path d="M30 -8 q -6 10 -2 18" /><path d="M60 6 q -6 8 -2 16" /></g>
+          {glaze && <g fill="#a8451f"><circle cx="-20" cy="-6" r="3" /><circle cx="14" cy="-2" r="3" /><circle cx="42" cy="8" r="2.5" /><circle cx="-48" cy="10" r="2.5" /></g>}
+        </g>
+        {glaze && <ellipse cx="150" cy="150" rx="150" ry="30" fill="#f6b24d" opacity="0.08" />}
+      </>
+    ));
+  }
+
+  if (kind === "brunch") {
+    return box(400, 220, (
+      <>
+        <rect width="400" height="220" fill={C.sand} />
+        {/* plate */}
+        <circle cx="180" cy="120" r="92" fill={C.milk} /><circle cx="180" cy="120" r="92" fill="none" stroke="#0000000f" strokeWidth="8" />
+        {/* toast */}
+        <rect x="120" y="96" width="80" height="52" rx="10" fill="#d9a45f" />
+        {/* eggs */}
+        <g><circle cx="200" cy="112" r="26" fill={C.milk} /><circle cx="200" cy="112" r="11" fill={C.gold} /><circle cx="236" cy="140" r="22" fill={C.milk} /><circle cx="236" cy="140" r="9" fill={C.gold} /></g>
+        {/* herbs */}
+        <g fill={C.olive}><circle cx="150" cy="150" r="4" /><circle cx="170" cy="160" r="4" /><circle cx="210" cy="158" r="4" /></g>
+        {/* cutlery + cup */}
+        <rect x="300" y="60" width="8" height="120" rx="4" fill="#b9b09c" /><rect x="322" y="60" width="8" height="120" rx="4" fill="#b9b09c" />
+        <g transform="translate(300 150)"><path d="M0 6 h56 v14 a28 28 0 0 1 -56 0 z" fill={C.cream} /><ellipse cx="28" cy="6" rx="28" ry="6" fill="#6f4a2c" /></g>
+      </>
+    ));
+  }
+
+  if (kind === "beans") {
+    return box(300, 300, (
+      <>
+        <rect width="300" height="300" fill={C.espresso} />
+        {/* scoop */}
+        <path d="M60 150 a70 70 0 0 0 140 0 z" fill="#caa06a" />
+        <rect x="196" y="140" width="90" height="18" rx="9" fill="#caa06a" />
+        {/* beans pile */}
+        {Array.from({ length: 26 }).map((_, i) => { const a = i * 0.61; const r = 30 + (i % 5) * 9; const x = 130 + Math.cos(a) * r; const y = 150 + Math.sin(a) * r * 0.7; return (<g key={i} transform={`translate(${x} ${y}) rotate(${(i * 47) % 180})`}><ellipse rx="11" ry="7" fill="#5a3620" /><path d="M0 -7 Q 3 0 0 7" stroke="#2a1a10" strokeWidth="1.5" fill="none" /></g>); })}
+      </>
+    ), C.espresso);
+  }
+
+  if (kind === "barista") {
+    return box(300, 300, (
+      <>
+        <rect width="300" height="300" fill={C.terra} />
+        {/* pour-over: gooseneck kettle pouring into a dripper */}
+        <g transform="translate(150 150)">
+          {/* kettle */}
+          <g transform="translate(-6 -96)"><rect x="-58" y="0" width="90" height="56" rx="14" fill={C.deep} /><path d="M32 14 q 46 2 40 54" fill="none" stroke={C.deep} strokeWidth="10" strokeLinecap="round" /><rect x="-40" y="-16" width="54" height="12" rx="6" fill={C.deep} /></g>
+          {/* pour stream */}
+          <path d="M72 -26 q 2 40 -18 66" fill="none" stroke={C.cream} strokeWidth="5" strokeLinecap="round" opacity="0.85" />
+          {/* dripper + cup */}
+          <path d="M6 40 L94 40 L74 92 L26 92 Z" fill={C.cream} />
+          <path d="M18 92 h64 v18 a32 32 0 0 1 -64 0 z" fill={C.milk} />
+        </g>
+        <g stroke={C.cream} strokeWidth="4" strokeLinecap="round" opacity="0.4" fill="none"><path d="M150 96 q -8 -14 3 -26" /></g>
+      </>
+    ), C.terra);
+  }
+
+  if (kind === "cake") {
+    return box(400, 260, (
+      <>
+        <rect width="400" height="260" fill={C.cream} />
+        <ellipse cx="200" cy="200" rx="150" ry="26" fill="#00000010" />
+        {/* plate */}
+        <ellipse cx="200" cy="196" rx="150" ry="24" fill={C.milk} />
+        {/* cake slice */}
+        <g transform="translate(150 78)">
+          <path d="M0 110 L0 40 L140 20 L140 100 Z" fill="#8a5a34" />
+          <path d="M0 40 L140 20 L140 34 L0 54 Z" fill="#f4d7bf" />
+          <path d="M0 68 L140 48 L140 62 L0 82 Z" fill="#f4d7bf" />
+          <path d="M0 40 L140 20 L150 30 L14 52 Z" fill={C.terra} />
+          <circle cx="70" cy="12" r="8" fill={C.clay} />
+        </g>
+        {/* fork */}
+        <g transform="translate(322 120)" fill="#b9b09c"><rect x="0" y="0" width="7" height="90" rx="3" /><rect x="-9" y="0" width="4" height="26" /><rect x="12" y="0" width="4" height="26" /></g>
+      </>
+    ));
+  }
+
+  if (kind === "storefront") {
+    return box(400, 224, (
+      <>
+        <rect width="400" height="224" fill="#b9c7c0" />
+        {/* building */}
+        <rect x="30" y="40" width="340" height="184" fill={C.cream} />
+        {/* sign */}
+        <rect x="30" y="40" width="340" height="34" fill={C.espresso} /><text x="200" y="64" textAnchor="middle" fill={C.cream} style={{ fontFamily: "var(--font-cormorant), serif", fontWeight: 600 }} fontSize="22" letterSpacing="4">AURELIA</text>
+        {/* awning */}
+        <g>{Array.from({ length: 8 }).map((_, i) => (<rect key={i} x={30 + i * 42.5} y="80" width="42.5" height="26" fill={i % 2 ? C.clay : "#e7d4b6"} />))}<rect x="30" y="104" width="340" height="6" fill={C.espresso} opacity="0.4" /></g>
+        {/* door + windows */}
+        <rect x="176" y="130" width="48" height="94" fill={C.espresso} /><rect x="182" y="140" width="36" height="50" fill="#8fb0c4" opacity="0.7" />
+        <rect x="60" y="130" width="90" height="70" fill="#8fb0c4" opacity="0.6" stroke={C.espresso} strokeWidth="3" />
+        <rect x="250" y="130" width="90" height="70" fill="#8fb0c4" opacity="0.6" stroke={C.espresso} strokeWidth="3" />
+        {/* outdoor table */}
+        <g transform="translate(96 206)"><rect x="-2" y="-16" width="4" height="16" fill={C.espresso} /><ellipse cx="0" cy="-16" rx="18" ry="5" fill={C.espresso} /></g>
+      </>
+    ));
+  }
+
+  if (kind === "board") {
+    return box(400, 520, (
+      <>
+        <rect width="400" height="520" fill={C.sand} />
+        {/* wooden board */}
+        <rect x="40" y="120" width="320" height="300" rx="24" fill="#a06a3c" />
+        <rect x="40" y="120" width="320" height="300" rx="24" fill="none" stroke="#7c4e28" strokeWidth="4" />
+        <g stroke="#8a5a30" strokeWidth="2" opacity="0.5"><line x1="60" y1="180" x2="340" y2="180" /><line x1="60" y1="280" x2="340" y2="280" /><line x1="60" y1="360" x2="340" y2="360" /></g>
+        {/* ricotta bowl */}
+        <g transform="translate(150 210)"><ellipse rx="56" ry="40" fill="#e9ddc4" /><ellipse cy="-6" rx="46" ry="26" fill={C.milk} /><path d="M-20 -12 q 20 -14 40 0" stroke={C.gold} strokeWidth="4" fill="none" /></g>
+        {/* honeycomb */}
+        <g transform="translate(266 214)" fill={C.gold}><polygon points="0,-24 21,-12 21,12 0,24 -21,12 -21,-12" /><polygon points="0,-24 21,-12 21,12 0,24 -21,12 -21,-12" fill="none" stroke="#b9812f" strokeWidth="2" /></g>
+        {/* figs / stone fruit */}
+        <g><circle cx="120" cy="330" r="22" fill="#7a3b57" /><path d="M120 308 l0 -10" stroke={C.olive} strokeWidth="4" /><circle cx="176" cy="352" r="18" fill="#c25a3a" /><circle cx="150" cy="368" r="14" fill="#8a3f5c" /></g>
+        {/* sourdough slices */}
+        <g transform="translate(280 350)"><ellipse rx="46" ry="30" fill="#d9a45f" /><ellipse rx="34" ry="20" fill="#efc98f" /></g>
+        <g transform="translate(300 300)"><ellipse rx="40" ry="26" fill="#d9a45f" /><ellipse rx="29" ry="17" fill="#efc98f" /></g>
+      </>
+    ));
+  }
+
+  if (kind === "coldbrew") {
+    return box(400, 520, (
+      <>
+        <defs><linearGradient id="cfCB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7c5230" /><stop offset="1" stopColor="#2a1a10" /></linearGradient></defs>
+        <rect width="400" height="520" fill="url(#cfCB)" />
+        {/* oak barrel hint */}
+        <g transform="translate(300 300)" opacity="0.5"><rect x="-70" y="-90" width="140" height="200" rx="34" fill="#6b4423" /><rect x="-72" y="-58" width="144" height="12" fill="#3a2416" /><rect x="-72" y="46" width="144" height="12" fill="#3a2416" /></g>
+        {/* tall glass */}
+        <g transform="translate(150 120)">
+          <rect x="-56" y="0" width="112" height="280" rx="16" fill="#d9c7a8" opacity="0.28" />
+          <rect x="-56" y="70" width="112" height="210" rx="16" fill="#3a1f12" />
+          {/* ice cubes */}
+          <g fill="#ffffff" opacity="0.22"><rect x="-40" y="86" width="34" height="34" rx="6" transform="rotate(12 -23 103)" /><rect x="6" y="104" width="34" height="34" rx="6" transform="rotate(-8 23 121)" /><rect x="-20" y="150" width="34" height="34" rx="6" transform="rotate(6 -3 167)" /></g>
+          {/* straw */}
+          <rect x="24" y="-30" width="12" height="300" rx="6" fill={C.clay} transform="rotate(8 30 120)" />
+        </g>
+      </>
+    ), C.deep);
+  }
+
+  return box(300, 300, <rect width="300" height="300" fill={C.sand} />);
+}
 
 function SignatureRow({ s, flip }: { s: (typeof SIGNATURES)[number]; flip: boolean }) {
   return (
     <div className={`grid items-center gap-8 md:grid-cols-2 md:gap-16 ${flip ? "md:[direction:rtl]" : ""}`}>
       <div className="md:[direction:ltr]">
-        <Img src={lf(s.k, s.lock)} alt={s.name} fallback={gradSoft} rounded="rounded-3xl" className="h-80 w-full md:h-[30rem]" />
+        <div className="h-80 w-full overflow-hidden rounded-3xl md:h-[30rem]"><CafeArt kind={s.kind} /></div>
       </div>
       <Reveal className="md:[direction:ltr]">
         <span className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: CLAY }}>{s.tag}</span>
