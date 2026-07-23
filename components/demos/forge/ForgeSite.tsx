@@ -92,7 +92,7 @@ export function ForgeSite() {
       <section id="top" ref={heroRef} className="relative min-h-[100svh] overflow-hidden pt-24">
         <motion.div style={{ y: imgY }} className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0" style={{ background: grad }} />
-          <img src={lf("gym,weights,fitness", 61)} alt="" className="h-full w-full object-cover opacity-40" onError={(e) => (e.currentTarget.style.display = "none")} />
+          <img src={lf("gym,barbell", 61)} alt="" className="h-full w-full object-cover opacity-40" onError={(e) => (e.currentTarget.style.display = "none")} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(11,11,13,0.95) 0%, rgba(11,11,13,0.5) 55%, rgba(11,11,13,0.85) 100%)" }} />
         </motion.div>
 
@@ -225,7 +225,7 @@ export function ForgeSite() {
             <p className="mt-6 text-sm font-bold uppercase tracking-wider" style={{ color: SUB, ...cond }}>Maya R. · Member since 2023</p>
           </Reveal>
           <Reveal i={1}>
-            <Img src={lf("athlete,training,gym", 66)} alt="Success story" fallback={grad} rounded="rounded-2xl" className="h-80 w-full md:h-96" />
+            <Img src={lf("woman,gym", 66)} alt="Success story" fallback={grad} rounded="rounded-2xl" className="h-80 w-full md:h-96" />
           </Reveal>
         </div>
       </section>
@@ -263,6 +263,6 @@ const TIMETABLE = [
 const COACHES = [
   { name: "Deniz K.", role: "Head Strength", k: "trainer,gym,man", lock: 51 },
   { name: "Amara O.", role: "Conditioning", k: "trainer,fitness,woman", lock: 52 },
-  { name: "Kai T.", role: "Olympic Lifting", k: "weightlifting,athlete", lock: 53 },
-  { name: "Sol M.", role: "Hyrox Coach", k: "running,athlete", lock: 54 },
+  { name: "Kai T.", role: "Olympic Lifting", k: "weightlifting,gym", lock: 53 },
+  { name: "Sol M.", role: "Hyrox Coach", k: "athlete,running", lock: 54 },
 ];

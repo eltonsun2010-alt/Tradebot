@@ -97,7 +97,7 @@ export function MeridianSite() {
       <section id="about" className="mx-auto max-w-6xl px-6 py-24 md:px-10 md:py-32">
         <div className="grid gap-14 md:grid-cols-[1fr_1fr] md:gap-20">
           <Reveal>
-            <Img src={lf("office,architecture,minimal", 31)} alt="Meridian" fallback={grad} rounded="rounded-[2rem]" className="h-[26rem] w-full md:h-[34rem]" />
+            <Img src={lf("architecture,minimal", 31)} alt="Meridian" fallback={grad} rounded="rounded-[2rem]" className="h-[26rem] w-full md:h-[34rem]" />
           </Reveal>
           <Reveal i={1} className="flex flex-col justify-center">
             <span className="text-[0.72rem] font-medium uppercase tracking-[0.28em]" style={{ color: ACCENT }}>Who we are</span>
