@@ -131,7 +131,7 @@ export function TradeSite() {
             <p className="mt-3 max-w-lg text-slate-300">Drag the handle to reveal the before &amp; after on a real consumer-unit upgrade.</p>
           </Reveal>
           <Reveal i={1} className="mt-10">
-            <BeforeAfter beforeK="wiring,old" afterK="electrical,panel" />
+            <BeforeAfter />
           </Reveal>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {PROJECTS.map((p, i) => (
@@ -244,7 +244,134 @@ export function TradeSite() {
 }
 
 /* --------------------------- before / after --------------------------- */
-function BeforeAfter({ beforeK, afterK }: { beforeK: string; afterK: string }) {
+/* The BEFORE state — a dangerous, outdated rewireable fuse board: dim, grimy,
+   ceramic fuses (one pulled out over a scorched socket), tangled cabling and a
+   warning. The problem reads instantly, no text required. */
+function OldBoardScene() {
+  return (
+    <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="oldWall" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2f2822" />
+          <stop offset="1" stopColor="#130f0b" />
+        </linearGradient>
+        <radialGradient id="scorch" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor="#ff8a2a" stopOpacity="0.9" />
+          <stop offset="0.45" stopColor="#5a2810" stopOpacity="0.7" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="800" height="450" fill="url(#oldWall)" />
+      {/* damp / grime */}
+      <path d="M0 0h800v96c-150 46-330-6-470 26C240 146 120 156 0 132Z" fill="#000" opacity="0.16" />
+      <ellipse cx="130" cy="380" rx="170" ry="70" fill="#000" opacity="0.14" />
+      {/* weathered wooden backboard */}
+      <rect x="235" y="66" width="330" height="308" rx="6" fill="#5a4530" stroke="#2f2213" strokeWidth="5" />
+      <g stroke="#3d2e1c" strokeWidth="2" opacity="0.5">
+        <line x1="250" y1="120" x2="550" y2="120" /><line x1="250" y1="210" x2="550" y2="210" /><line x1="250" y1="300" x2="550" y2="300" />
+      </g>
+      <g fill="#241a10"><circle cx="252" cy="84" r="5" /><circle cx="548" cy="84" r="5" /><circle cx="252" cy="356" r="5" /><circle cx="548" cy="356" r="5" /></g>
+      {/* old main switch, toggle down (off/dead) */}
+      <rect x="258" y="150" width="56" height="150" rx="4" fill="#151210" stroke="#000" strokeWidth="3" />
+      <rect x="276" y="235" width="20" height="46" rx="3" fill="#4a453d" />
+      {/* scorch behind the faulty way */}
+      <circle cx="470" cy="188" r="66" fill="url(#scorch)" />
+      {/* ceramic rewireable fuse carriers — three seated, one pulled out */}
+      {[352, 396, 440].map((x) => (
+        <g key={x} transform={`translate(${x} 152)`}>
+          <rect x="-18" y="0" width="36" height="74" rx="5" fill="#d7cbb0" stroke="#a5946f" strokeWidth="2" />
+          <rect x="-11" y="14" width="22" height="18" rx="2" fill="#7c4e24" />
+          <circle cx="0" cy="56" r="4" fill="#94855f" />
+        </g>
+      ))}
+      {/* empty scorched socket */}
+      <rect x="466" y="152" width="40" height="74" rx="5" fill="#0d0a07" stroke="#3a2c1c" strokeWidth="2" />
+      <rect x="474" y="166" width="24" height="16" rx="2" fill="#241812" />
+      {/* the pulled-out fuse, askew above it */}
+      <g transform="translate(512 118) rotate(18)">
+        <rect x="-16" y="0" width="32" height="64" rx="5" fill="#cfc2a4" stroke="#a5946f" strokeWidth="2" />
+        <rect x="-9" y="12" width="18" height="14" rx="2" fill="#7c4e24" />
+      </g>
+      {/* tangled, frayed cabling drooping from the board */}
+      <g fill="none" strokeWidth="5" strokeLinecap="round">
+        <path d="M300 300 C 300 350 360 344 372 372" stroke="#b23b2e" />
+        <path d="M352 226 C 350 300 300 320 322 372" stroke="#161311" />
+        <path d="M440 226 C 452 300 512 316 470 372" stroke="#2f66b0" />
+        <path d="M486 214 C 520 270 470 330 520 372" stroke="#a7b52a" />
+        <path d="M396 226 C 396 280 430 300 404 360" stroke="#161311" opacity="0.8" />
+      </g>
+      {/* frayed ends */}
+      <g stroke="#c9c2b0" strokeWidth="2" strokeLinecap="round">
+        <path d="M520 118 l 10 -8 M520 118 l 12 0 M520 118 l 8 10" />
+      </g>
+      {/* warning triangle */}
+      <g transform="translate(516 92)">
+        <path d="M0 -20 L18 14 L-18 14 Z" fill="#f6a723" stroke="#1a1206" strokeWidth="2" />
+        <rect x="-2.5" y="-8" width="5" height="14" rx="2" fill="#1a1206" />
+        <circle cx="0" cy="10" r="2.6" fill="#1a1206" />
+      </g>
+    </svg>
+  );
+}
+
+/* The AFTER state — a clean, modern consumer unit: bright, organised, labelled
+   MCBs on a tidy DIN rail, neat cabling and a certification badge. The solution
+   reads instantly. */
+function NewUnitScene() {
+  const mcbs = Array.from({ length: 10 }, (_, i) => 300 + i * 30);
+  return (
+    <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="newWall" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#eef3f8" />
+          <stop offset="1" stopColor="#dbe4ee" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="450" fill="url(#newWall)" />
+      <rect x="0" y="392" width="800" height="58" fill="#ccd6e0" opacity="0.6" />
+      {/* enclosure shadow + body */}
+      <rect x="158" y="150" width="504" height="176" rx="14" fill="#0e2942" opacity="0.10" />
+      <rect x="150" y="140" width="500" height="172" rx="12" fill="#ffffff" stroke="#cfd8e2" strokeWidth="2" />
+      <rect x="166" y="156" width="468" height="140" rx="8" fill="#f5f8fb" stroke="#e3e9f0" strokeWidth="2" />
+      {/* DIN rail */}
+      <rect x="176" y="212" width="448" height="7" rx="2" fill="#b7c1cc" />
+      {/* main switch (amber, on/up) */}
+      <g>
+        <rect x="182" y="182" width="46" height="94" rx="5" fill="#ffffff" stroke="#cdd6df" strokeWidth="2" />
+        <rect x="197" y="190" width="16" height="30" rx="3" fill="#f6a723" />
+        <rect x="188" y="284" width="34" height="9" rx="2" fill="#e6ebf1" />
+      </g>
+      {/* RCD */}
+      <g>
+        <rect x="238" y="182" width="42" height="94" rx="5" fill="#ffffff" stroke="#cdd6df" strokeWidth="2" />
+        <rect x="251" y="190" width="16" height="30" rx="3" fill="#0e2942" />
+        <rect x="200" y="290" width="6" height="6" fill="#0e2942" opacity="0.0" />
+      </g>
+      {/* MCB rows (all switched on / up) */}
+      {mcbs.map((x) => (
+        <g key={x}>
+          <rect x={x} y="184" width="24" height="90" rx="4" fill="#ffffff" stroke="#cdd6df" strokeWidth="2" />
+          <rect x={x + 6} y="192" width="12" height="24" rx="3" fill="#0e2942" />
+          <rect x={x + 3} y="284" width="18" height="9" rx="2" fill="#e6ebf1" />
+        </g>
+      ))}
+      {/* neat cabling entering from below, dressed together */}
+      <g fill="none" strokeWidth="6" strokeLinecap="round">
+        <path d="M300 312 L300 372" stroke="#8a5a2a" />
+        <path d="M320 312 L320 372" stroke="#2f66b0" />
+        <path d="M340 312 L340 372" stroke="#a7b52a" />
+      </g>
+      <rect x="292" y="344" width="56" height="12" rx="4" fill="#0e2942" opacity="0.85" />
+      {/* certification badge */}
+      <g transform="translate(600 96)">
+        <circle r="30" fill="#f6a723" />
+        <path d="M-12 2 L-3 12 L14 -10" fill="none" stroke="#0e2942" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </svg>
+  );
+}
+
+function BeforeAfter() {
   const [pos, setPos] = useState(50);
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -269,13 +396,13 @@ function BeforeAfter({ beforeK, afterK }: { beforeK: string; afterK: string }) {
       className="relative aspect-[16/9] w-full cursor-ew-resize select-none overflow-hidden rounded-3xl"
       onPointerDown={(e) => { dragging.current = true; move(e.clientX); }}
     >
-      {/* after (base) */}
-      <img src={lf(afterK, 46)} alt="After" className="absolute inset-0 h-full w-full object-cover" style={{ background: grad }} onError={(e) => (e.currentTarget.style.opacity = "0")} />
-      <span className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold" style={{ color: NAVY }}>AFTER</span>
-      {/* before (clipped) */}
+      {/* after (base): a clean, modern consumer unit */}
+      <NewUnitScene />
+      <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold" style={{ color: NAVY }}>AFTER · new consumer unit</span>
+      {/* before (clipped): a dangerous old rewireable fuse board */}
       <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        <img src={lf(beforeK, 47)} alt="Before" className="absolute inset-0 h-full w-full object-cover" style={{ background: "linear-gradient(150deg,#3a3f45,#14181c)" }} onError={(e) => (e.currentTarget.style.opacity = "0")} />
-        <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs font-bold text-white">BEFORE</span>
+        <OldBoardScene />
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-bold text-white">BEFORE · old fuse board</span>
       </div>
       {/* handle */}
       <div className="absolute inset-y-0" style={{ left: `${pos}%` }}>
