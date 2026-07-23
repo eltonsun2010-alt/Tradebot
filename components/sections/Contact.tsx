@@ -13,10 +13,20 @@ type Status = "idle" | "sending" | "sent";
 type Fields = { name: string; business: string; email: string; phone: string; message: string };
 const EMPTY: Fields = { name: "", business: "", email: "", phone: "", message: "" };
 
+// When set at build time, the form posts to the Southpage automation edge signer
+// (see automation/edge/signer.ts). When unset, the form simulates a send so the
+// static demo keeps working. The endpoint is public by design — it holds no
+// secret; the HMAC signing secret lives inside the edge worker.
+const ENDPOINT = process.env.NEXT_PUBLIC_CONTACT_ENDPOINT;
+// Must match `honeypotField` in automation/config/clients/southpage.ts.
+const HONEYPOT = "company_website";
+
 export function Contact() {
   const [fields, setFields] = useState<Fields>(EMPTY);
   const [errors, setErrors] = useState<Partial<Fields>>({});
   const [status, setStatus] = useState<Status>("idle");
+  // Honeypot: a real user never fills this; bots that auto-fill every input do.
+  const [trap, setTrap] = useState("");
 
   const update = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -33,16 +43,47 @@ export function Contact() {
     return Object.keys(next).length === 0;
   };
 
-  const onSubmit = (e: FormEvent) => {
+  const finishSent = () => {
+    setStatus("sent");
+    setFields(EMPTY);
+    setTrap("");
+    setTimeout(() => setStatus("idle"), 3500);
+  };
+
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (status !== "idle") return;
     if (!validate()) return;
     setStatus("sending");
-    setTimeout(() => {
-      setStatus("sent");
-      setFields(EMPTY);
-      setTimeout(() => setStatus("idle"), 3500);
-    }, 1400);
+
+    // No endpoint configured → keep the static demo's simulated send.
+    if (!ENDPOINT) {
+      setTimeout(finishSent, 1400);
+      return;
+    }
+
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: fields.name,
+          email: fields.email,
+          phone: fields.phone,
+          company: fields.business,
+          message: fields.message,
+          source: "southpage.co.uk/#contact",
+          [HONEYPOT]: trap,
+        }),
+      });
+      // The pipeline returns 2xx for accepted/duplicate/honeypot; anything else
+      // is a genuine failure the visitor should be able to retry.
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      finishSent();
+    } catch {
+      setErrors((p) => ({ ...p, message: "Something went wrong — please try again or email us." }));
+      setStatus("idle");
+    }
   };
 
   return (
@@ -93,6 +134,19 @@ export function Contact() {
         {/* Form */}
         <Reveal delay={0.1}>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-8">
+            {/* Honeypot: hidden from users and assistive tech; only bots fill it. */}
+            <div aria-hidden className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden" style={{ opacity: 0 }}>
+              <label htmlFor={HONEYPOT}>Company website (leave blank)</label>
+              <input
+                id={HONEYPOT}
+                name={HONEYPOT}
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={trap}
+                onChange={(e) => setTrap(e.target.value)}
+              />
+            </div>
             <FloatingField label="Name" name="name" value={fields.name} onChange={update} error={errors.name} autoComplete="name" />
             <FloatingField label="Business" name="business" value={fields.business} onChange={update} autoComplete="organization" />
             <div className="grid gap-8 sm:grid-cols-2">

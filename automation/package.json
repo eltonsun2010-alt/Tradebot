@@ -1,0 +1,26 @@
+{
+  "name": "@southpage/automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Southpage production automation framework — a reusable, config-driven contact-form pipeline (validate → anti-abuse → store → notify) that runs unchanged inside an n8n Code node, a serverless function, or unit tests.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": ["dist/src", "dist/config"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "tsc && node --test \"dist/tests/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
