@@ -19,6 +19,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "config", "tests", "edge"],
+  "include": ["src", "config", "tests", "edge", "scripts"],
   "exclude": ["node_modules", "dist"]
 }

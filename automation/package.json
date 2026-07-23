@@ -17,7 +17,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test": "tsc && node --test \"dist/tests/**/*.test.js\""
+    "test": "tsc && node --test \"dist/tests/**/*.test.js\"",
+    "test:email": "tsc && node --env-file=.env dist/scripts/send-test-email.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
