@@ -98,7 +98,7 @@ export function TradeSite() {
             </div>
           </div>
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2, ease }}>
-            <Img src={lf("electrician,electrical,work", 41)} alt="Northgate electrician at work" fallback={grad} rounded="rounded-3xl" className="h-80 w-full md:h-[30rem]" priority />
+            <Img src={lf("electrician,work", 41)} alt="Northgate electrician at work" fallback={grad} rounded="rounded-3xl" className="h-80 w-full md:h-[30rem]" priority />
           </motion.div>
         </div>
       </section>
@@ -131,7 +131,7 @@ export function TradeSite() {
             <p className="mt-3 max-w-lg text-slate-300">Drag the handle to reveal the before &amp; after on a real consumer-unit upgrade.</p>
           </Reveal>
           <Reveal i={1} className="mt-10">
-            <BeforeAfter beforeK="old,wiring,messy" afterK="electrical,panel,new" />
+            <BeforeAfter beforeK="wiring,old" afterK="electrical,panel" />
           </Reveal>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {PROJECTS.map((p, i) => (
@@ -331,9 +331,9 @@ const SERVICES = [
 ];
 
 const PROJECTS = [
-  { t: "Full house rewire", loc: "Elmwood · 3-bed semi", k: "house,rewiring", lock: 42 },
+  { t: "Full house rewire", loc: "Elmwood · 3-bed semi", k: "cables,wiring", lock: 42 },
   { t: "Kitchen lighting", loc: "Riverside · new build", k: "kitchen,lighting", lock: 43 },
-  { t: "EV charger fit", loc: "Northgate · driveway", k: "ev,charger", lock: 44 },
+  { t: "EV charger fit", loc: "Northgate · driveway", k: "electric,car", lock: 44 },
 ];
 
 const WHY = [

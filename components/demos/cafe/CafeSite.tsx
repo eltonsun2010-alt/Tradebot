@@ -98,7 +98,7 @@ export function CafeSite() {
       {/* ── Cinematic hero ── */}
       <section id="top" ref={heroRef} className="relative h-[100svh] w-full overflow-hidden">
         <motion.div style={{ y: heroY, scale: heroScale, background: grad }} className="absolute inset-0">
-          <img src={lf("coffee,cafe,espresso", 71)} alt="" className="h-full w-full object-cover opacity-90" onError={(e) => ((e.currentTarget.style.display = "none"))} />
+          <img src={lf("barista,espresso", 71)} alt="" className="h-full w-full object-cover opacity-90" onError={(e) => ((e.currentTarget.style.display = "none"))} />
         </motion.div>
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(20,12,7,0.55) 0%, rgba(20,12,7,0.15) 35%, rgba(20,12,7,0.65) 100%)" }} />
         <motion.div style={{ opacity: heroFade }} className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-end px-6 pb-[12vh] md:px-10">
@@ -164,11 +164,11 @@ export function CafeSite() {
           {[
             { k: "cafe,interior", h: "h-72 md:h-96", span: "md:row-span-2", lock: 81 },
             { k: "coffee,latte", h: "h-40 md:h-44", span: "", lock: 82 },
-            { k: "pastry,croissant", h: "h-40 md:h-44", span: "", lock: 83 },
-            { k: "cafe,table,breakfast", h: "h-40 md:h-48", span: "md:col-span-2", lock: 84 },
+            { k: "croissant,bakery", h: "h-40 md:h-44", span: "", lock: 83 },
+            { k: "brunch,table", h: "h-40 md:h-48", span: "md:col-span-2", lock: 84 },
             { k: "coffee,beans", h: "h-52 md:h-60", span: "", lock: 85 },
-            { k: "barista,coffee", h: "h-52 md:h-60", span: "", lock: 86 },
-            { k: "cake,dessert", h: "h-52 md:h-60", span: "md:col-span-2", lock: 87 },
+            { k: "barista,cafe", h: "h-52 md:h-60", span: "", lock: 86 },
+            { k: "patisserie,cake", h: "h-52 md:h-60", span: "md:col-span-2", lock: 87 },
           ].map((g) => (
             <div key={g.lock} className={`group relative overflow-hidden rounded-2xl ${g.span}`}>
               <Img src={lf(g.k, g.lock)} alt="Aurelia" fallback={gradSoft} rounded="rounded-2xl" className={`${g.h} w-full transition-transform duration-700 group-hover:scale-105`} />
@@ -206,7 +206,7 @@ export function CafeSite() {
 
           <Reveal i={1}>
             <div className="overflow-hidden rounded-3xl" style={{ border: "1px solid rgba(42,26,16,0.12)" }}>
-              <Img src={lf("cafe,street,shopfront", 88)} alt="Aurelia storefront" fallback={grad} rounded="rounded-none" className="h-56 w-full" />
+              <Img src={lf("cafe,storefront", 88)} alt="Aurelia storefront" fallback={grad} rounded="rounded-none" className="h-56 w-full" />
               <div className="p-8" style={{ background: CREAM }}>
                 <h3 className="text-2xl" style={{ ...serif, fontWeight: 600 }}>Find us</h3>
                 <p className="mt-3 leading-relaxed" style={{ color: SUB }}>128 Vine Street, corner of Maple<br />Riverside District</p>
@@ -318,9 +318,9 @@ function MenuSection() {
 }
 
 const SIGNATURES = [
-  { name: "The Aurelia Board", note: "Whipped ricotta, honeycomb, stone fruit and warm sourdough — made to share, slowly.", k: "breakfast,board,cheese", lock: 91, tag: "House favourite" },
+  { name: "The Aurelia Board", note: "Whipped ricotta, honeycomb, stone fruit and warm sourdough — made to share, slowly.", k: "brunch,board", lock: 91, tag: "House favourite" },
   { name: "Saffron Croissant", note: "Our three-day laminated croissant, glazed in saffron and finished with candied orange.", k: "croissant,pastry", lock: 92, tag: "Bakery" },
-  { name: "Barrel-Aged Cold Brew", note: "Steeped 18 hours, rested in oak. Notes of dark cocoa, fig and a whisper of vanilla.", k: "coldbrew,coffee", lock: 93, tag: "Coffee bar" },
+  { name: "Barrel-Aged Cold Brew", note: "Steeped 18 hours, rested in oak. Notes of dark cocoa, fig and a whisper of vanilla.", k: "coffee,iced", lock: 93, tag: "Coffee bar" },
 ];
 
 function SignatureRow({ s, flip }: { s: (typeof SIGNATURES)[number]; flip: boolean }) {
