@@ -53,17 +53,23 @@ export function Pricing() {
                 : undefined
             }
           >
-            {p.featured && (
+            {p.featured && !p.comingSoon && (
               <span className="absolute right-8 top-8 rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-ink">
                 Most popular
               </span>
             )}
             <h3 className="font-display text-xl font-bold text-paper">{p.name}</h3>
-            <div className="mt-4 flex items-end gap-2">
-              <span className="text-sm text-paper-dim">from</span>
-              <span className="font-display text-5xl font-extrabold text-paper">${p.price}</span>
-              <span className="mb-1 text-sm text-paper-dim">{p.currency}</span>
-            </div>
+            {p.comingSoon ? (
+              <div className="mt-4">
+                <span className="font-display text-4xl font-extrabold text-paper">Coming Soon</span>
+              </div>
+            ) : (
+              <div className="mt-4 flex items-end gap-2">
+                <span className="text-sm text-paper-dim">from</span>
+                <span className="font-display text-5xl font-extrabold text-paper">${p.price}</span>
+                <span className="mb-1 text-sm text-paper-dim">{p.currency}</span>
+              </div>
+            )}
             <p className="mt-4 text-sm leading-relaxed text-paper-dim">{p.tagline}</p>
 
             <ul className="mt-8 flex-1 space-y-3">

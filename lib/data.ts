@@ -120,6 +120,7 @@ export const PRICING = [
     name: "Website Essentials",
     price: "399",
     currency: "AUD",
+    comingSoon: false,
     tagline: "A professional website built to give your business a strong online presence.",
     features: [
       "Custom-designed website",
@@ -136,9 +137,11 @@ export const PRICING = [
     featured: false,
   },
   {
-    name: "Website + Automation",
+    name: "Smart Automation Systems",
+    // Price is preserved for launch but hidden while `comingSoon` is true.
     price: "699",
     currency: "AUD",
+    comingSoon: true,
     tagline: "Everything in Website Essentials, plus smart automation designed to save time and simplify your workflow.",
     features: [
       "Everything in Website Essentials",
@@ -151,7 +154,7 @@ export const PRICING = [
       "Personal walkthrough after launch",
     ],
     best: "Businesses wanting to reduce repetitive admin, respond faster, and create a smoother customer experience.",
-    cta: "Book a Consultation",
+    cta: "Register your interest",
     featured: true,
   },
 ] as const;

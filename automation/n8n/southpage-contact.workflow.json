@@ -1,0 +1,76 @@
+{
+  "name": "Southpage — Contact Ingress",
+  "meta": {
+    "description": "Thin ops shell around @southpage/automation. The Code node holds NO business logic — it only calls handleIngress(). All validation, anti-abuse, storage, notification, retry and error handling live in the versioned, unit-tested TypeScript package, so this workflow rarely changes and behaves identically to the tests."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "southpage-contact",
+        "responseMode": "responseNode",
+        "options": { "rawBody": true }
+      },
+      "id": "webhook-ingress",
+      "name": "Ingress Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "southpage-contact"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// The ONLY logic here is delegation. Requires @southpage/automation to be\n// installed in the n8n instance and NODE_FUNCTION_ALLOW_EXTERNAL to permit it.\n// Secrets come from process.env — never from the workflow JSON.\nconst { handleIngress, southpage } = require('@southpage/automation');\n\nconst item = $input.first().json;\nconst headers = item.headers || {};\nconst rawBody = item.body === undefined ? JSON.stringify(item) : (typeof item.rawBody === 'string' ? item.rawBody : JSON.stringify(item.body));\nconst body = typeof item.body === 'object' && item.body !== null ? item.body : item;\n\nconst result = await handleIngress(\n  {\n    rawBody,\n    body,\n    headers,\n    meta: {\n      ip: headers['x-forwarded-for'],\n      userAgent: headers['user-agent'],\n      referer: headers['referer'],\n    },\n  },\n  { config: southpage, env: process.env },\n);\n\n// Hand the workflow the fields the Respond node needs.\nreturn [{ json: result }];"
+      },
+      "id": "code-handler",
+      "name": "Run Automation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"message\": $json.publicMessage, \"correlationId\": $json.correlationId, \"status\": $json.status } }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus }}"
+        }
+      },
+      "id": "respond-ok",
+      "name": "Respond to Browser",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [780, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"message\": \"We couldn't process your message right now. Please try again shortly.\" } }}",
+        "options": { "responseCode": 500 }
+      },
+      "id": "respond-error",
+      "name": "Respond (Unhandled)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [780, 400]
+    }
+  ],
+  "connections": {
+    "Ingress Webhook": {
+      "main": [[{ "node": "Run Automation", "type": "main", "index": 0 }]]
+    },
+    "Run Automation": {
+      "main": [
+        [{ "node": "Respond to Browser", "type": "main", "index": 0 }],
+        [{ "node": "Respond (Unhandled)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "Southpage — Automation Error Handler",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
